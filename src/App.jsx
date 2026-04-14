@@ -224,7 +224,7 @@ function Hero({onCTA,onLearn}) {
       <div style={{position:"relative",zIndex:2,textAlign:"center",maxWidth:880,padding:"0 24px",animation:"fadeUp .9s ease forwards"}}>
         <div style={{display:"inline-flex",alignItems:"center",gap:8,background:`${C.goldMuted}2A`,border:`1px solid ${C.borderGold}`,borderRadius:100,padding:"6px 18px",marginBottom:32}}>
           <div style={{width:6,height:6,borderRadius:"50%",background:C.goldBright,animation:"shimmer 2s infinite"}}/>
-          <span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:C.gold,letterSpacing:".12em",textTransform:"uppercase"}}>Powered by Huit.AI Intelligence</span>
+          <span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:C.gold,letterSpacing:".12em",textTransform:"uppercase"}}>Powered by Huit.AI · Built From Alaska</span>
         </div>
         <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"clamp(44px,7vw,82px)",fontWeight:600,lineHeight:1.05,color:C.white,marginBottom:24}}>
           The Intelligence Layer<br/>
@@ -276,7 +276,7 @@ function Modules() {
       <div style={{textAlign:"center",marginBottom:64}}>
         <Pill>Platform</Pill>
         <h2 style={H2}>Six Tools. One Platform.<br/><span style={GoldGrad}>Every CRE Professional Covered.</span></h2>
-        <p style={{fontSize:16,color:C.muted,maxWidth:560,margin:"16px auto 0",lineHeight:1.7}}>From beginner CRE broker to 8-figure brokerage — APEXCapital replaces courses, spreadsheets, and manual research.</p>
+        <p style={{fontSize:16,color:C.muted,maxWidth:560,margin:"16px auto 0",lineHeight:1.7}}>From beginner CRE broker to 8-figure brokerage — HyCRE replaces courses, spreadsheets, and manual research.</p>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:22}}>
         {items.map((m,i)=>{
@@ -304,7 +304,7 @@ function Pricing({onSelect}) {
         <div style={{textAlign:"center",marginBottom:64}}>
           <Pill>Pricing</Pill>
           <h2 style={H2}>Start Learning. Start Closing.<br/><span style={GoldGrad}>Choose Your Plan.</span></h2>
-          <p style={{fontSize:16,color:C.muted,maxWidth:560,margin:"16px auto 0",lineHeight:1.7}}>One closed CRE deal pays for years of access. Their $2,995 course teaches you how. APEXCapital does it for you.</p>
+          <p style={{fontSize:16,color:C.muted,maxWidth:560,margin:"16px auto 0",lineHeight:1.7}}>One closed CRE deal pays for years of access. Their $2,995 course teaches you how. HyCRE does it for you.</p>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:22,alignItems:"start"}}>
           {Object.values(TIERS).map(t=>{
@@ -337,7 +337,7 @@ function CtaBanner({onCTA}) {
     <section style={{padding:"80px 24px",borderTop:`1px solid ${C.border}`}}>
       <div style={{maxWidth:700,margin:"0 auto",textAlign:"center"}}>
         <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"clamp(30px,5vw,52px)",fontWeight:600,color:C.white,marginBottom:20}}>One Deal Pays for<br/><span style={GoldGrad}>Years of Access.</span></h2>
-        <p style={{fontSize:17,color:C.muted,marginBottom:40,lineHeight:1.7}}>Their $2,995 course teaches you how. APEXCapital does it for you — with AI that underwrites, matches lenders, and closes deals in real time.</p>
+        <p style={{fontSize:17,color:C.muted,marginBottom:40,lineHeight:1.7}}>Their $2,995 course teaches you how. HyCRE does it for you — with AI that underwrites, matches lenders, and closes deals in real time.</p>
         <button onClick={onCTA} style={{...btnGold,fontSize:17,padding:"16px 44px",display:"inline-flex",alignItems:"center",gap:10}}>Get Started Today <ArrowRight size={18}/></button>
         <p style={{marginTop:14,color:C.dim,fontSize:13}}>No free trial · Secure checkout · Cancel monthly anytime</p>
       </div>
@@ -350,7 +350,7 @@ function Footer() {
     <footer style={{borderTop:`1px solid ${C.border}`,padding:"36px 24px",background:C.bg}}>
       <div style={{maxWidth:1200,margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:14}}>
         <Logo/>
-        <p style={{fontSize:12,color:C.dim}}>© 2025 APEXCapital.ai · A Huit.AI Product · Built From Alaska.</p>
+        <p style={{fontSize:12,color:C.dim}}>© 2025 HyCRE.ai · A Huit.AI Product · Built From Alaska.</p>
         <div style={{display:"flex",gap:20}}>{["Privacy","Terms","Support"].map(l=><a key={l} href="#" style={{fontSize:12,color:C.dim,textDecoration:"none"}}>{l}</a>)}</div>
       </div>
     </footer>
@@ -382,7 +382,7 @@ function Checkout({tier,onBack,onSuccess}) {
       <div style={{background:C.surface,border:`1px solid ${C.borderGold}`,borderRadius:20,padding:52,textAlign:"center",maxWidth:460,width:"100%",animation:"fadeUp .5s ease"}}>
         <div style={{width:68,height:68,borderRadius:"50%",background:C.successBg,border:`2px solid ${C.success}`,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px"}}><Check size={30} color={C.success}/></div>
         <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:34,fontWeight:600,color:C.white,marginBottom:10}}>You're In.</h2>
-        <p style={{color:C.muted,marginBottom:6}}>Welcome to APEXCapital, <strong style={{color:C.text}}>{form.name}</strong>.</p>
+        <p style={{color:C.muted,marginBottom:6}}>Welcome to HyCRE, <strong style={{color:C.text}}>{form.name}</strong>.</p>
         <p style={{color:C.muted,marginBottom:32,fontSize:13}}>Confirmation sent to {form.email}</p>
         <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:18,marginBottom:28,textAlign:"left"}}>
           <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:12,color:C.muted}}>Plan</span><span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:C.gold}}>{tier.name}</span></div>
@@ -456,7 +456,7 @@ function Login({onBack,onSuccess}) {
           <div style={{textAlign:"center",marginBottom:28}}>
             <div style={{width:48,height:48,background:`${C.goldMuted}22`,border:`1px solid ${C.borderGold}`,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}><Shield size={20} color={C.gold}/></div>
             <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:600,color:C.white}}>Sign In</h2>
-            <p style={{fontSize:13,color:C.muted,marginTop:4}}>Access your APEXCapital dashboard</p>
+            <p style={{fontSize:13,color:C.muted,marginTop:4}}>Access your HyCRE dashboard</p>
           </div>
           <FI label="Email" val={form.email} set={v=>setForm(p=>({...p,email:v}))} ph="you@example.com"/>
           <FI label="Password" val={form.password} set={v=>setForm(p=>({...p,password:v}))} ph="••••••••" type={showPw?"text":"password"} suffix={<button type="button" onClick={()=>setShowPw(s=>!s)} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:0}}>{showPw?<EyeOff size={13}/>:<Eye size={13}/>}</button>}/>
@@ -581,7 +581,7 @@ function HuitBrain() {
   const [loading,setLoading]=useState(false);
   const bottomRef=useRef(null);
   useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:"smooth"});},[messages]);
-  const SYSTEM="You are Huit Brain, the AI advisor for APEXCapital.ai — a premium CRE capital intelligence platform. You are a senior commercial real estate capital markets expert. Be concise, direct, and expert. Use specific numbers and benchmarks.";
+  const SYSTEM="You are Huit Brain, the AI advisor for HyCRE.ai — a premium CRE capital intelligence platform. You are a senior commercial real estate capital markets expert. Be concise, direct, and expert. Use specific numbers and benchmarks.";
   const send=async(text)=>{
     const msg=text||input.trim();if(!msg||loading)return;
     setInput("");
@@ -807,7 +807,7 @@ function ProspectingEngine() {
   const genOutreach=async()=>{
     const p=prospects.find(p=>selected.includes(p.id));if(!p)return;
     setOLoading(true);setOutreach(null);
-    try{const r=await callAI("You are a CRE capital finder writing outreach sequences. Generate a 3-touch sequence (Email 1, LinkedIn DM, Email 2 Follow-up). Include subject lines. Be specific and professional, not salesy.","Write a 3-touch outreach to: "+p.name+", who had a "+p.propType+" loan of $"+p.loanAmt.toLocaleString()+" in "+p.city+", "+p.state+" ("+p.year+" HMDA, financed by "+p.lender+"). I'm a CRE capital finder with APEXCapital.ai offering better rates, higher LTV, and non-recourse structures.");setOutreach(r);}
+    try{const r=await callAI("You are a CRE capital finder writing outreach sequences. Generate a 3-touch sequence (Email 1, LinkedIn DM, Email 2 Follow-up). Include subject lines. Be specific and professional, not salesy.","Write a 3-touch outreach to: "+p.name+", who had a "+p.propType+" loan of $"+p.loanAmt.toLocaleString()+" in "+p.city+", "+p.state+" ("+p.year+" HMDA, financed by "+p.lender+"). I'm a CRE capital finder with HyCRE.ai offering better rates, higher LTV, and non-recourse structures.");setOutreach(r);}
     catch{setOutreach("Error generating sequence.");}
     setOLoading(false);
   };
@@ -1245,7 +1245,7 @@ function APEXScore() {
 }
 
 /* ─── MICRO COMPONENTS ─── */
-function Logo(){return<div style={{display:"flex",alignItems:"center",gap:8}}><LogoIcon/><span style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:600,fontSize:18,color:C.white,letterSpacing:".04em"}}>APEX<span style={{color:C.gold}}>Capital</span></span></div>;}
+function Logo(){return<div style={{display:"flex",alignItems:"center",gap:8}}><LogoIcon/><span style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:600,fontSize:18,color:C.white,letterSpacing:".04em"}}>Hy<span style={{color:C.gold}}>CRE</span></span></div>;}
 function LogoIcon(){return<div style={{width:28,height:28,background:`linear-gradient(135deg, ${C.gold}, ${C.goldBright})`,borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,color:C.bg,fontSize:14}}>A</span></div>;}
 function Pill({children}){return<div style={{display:"inline-flex",alignItems:"center",gap:6,background:`${C.goldMuted}18`,border:`1px solid ${C.borderGold}`,borderRadius:100,padding:"5px 14px",marginBottom:14}}><span style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:C.gold,letterSpacing:".12em",textTransform:"uppercase"}}>{children}</span></div>;}
 function FL({l}){return<label style={{fontSize:10,fontWeight:500,color:C.muted,textTransform:"uppercase",letterSpacing:".08em",display:"block",marginBottom:5}}>{l}</label>;}
