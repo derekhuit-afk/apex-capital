@@ -358,27 +358,108 @@ function Footer() {
 }
 
 /* ─── CHECKOUT ─── */
+/* ─── TOS / PRIVACY MODAL ─── */
+function LegalModal({type, onClose}) {
+  const isTOS = type === "tos";
+  const title = isTOS ? "Terms of Service" : "Privacy Policy";
+  const effective = "April 14, 2026";
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",backdropFilter:"blur(6px)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={onClose}>
+      <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,maxWidth:620,width:"100%",maxHeight:"82vh",display:"flex",flexDirection:"column",animation:"fadeUp .3s ease"}} onClick={e=>e.stopPropagation()}>
+        <div style={{padding:"20px 24px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+          <div>
+            <h3 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,color:C.white}}>{title}</h3>
+            <p style={{fontSize:11,color:C.muted,marginTop:2}}>HyCRE.ai · Effective {effective}</p>
+          </div>
+          <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:4}}><X size={18}/></button>
+        </div>
+        <div style={{overflow:"auto",padding:"20px 24px",fontSize:13,color:C.muted,lineHeight:1.8}}>
+          {isTOS ? (
+            <>
+              <Section t="1. Acceptance of Terms">By accessing or using HyCRE.ai ("Service"), you agree to be bound by these Terms of Service. If you do not agree, do not use the Service. HyCRE.ai is operated by Huit.AI, Inc. ("Company," "we," "us").</Section>
+              <Section t="2. Description of Service">HyCRE.ai provides AI-powered commercial real estate capital intelligence tools including deal packaging, lender matching, underwriting calculators, HMDA-based prospecting, market data, and educational content. The Service is provided on a subscription basis.</Section>
+              <Section t="3. Subscription & Payment">Subscriptions are billed in advance. The FOUNDATION plan is a one-time payment of $2,995 for lifetime access to specified features. ACTIVE ($249/mo) and AGENCY ($999/mo) plans are billed monthly and may be cancelled at any time. All payments are processed through ZenoPay. All sales are final. No refunds are provided for partial billing periods.</Section>
+              <Section t="4. Acceptable Use">You agree not to: (a) use the Service for unlawful purposes; (b) attempt to reverse engineer or extract source code; (c) resell or redistribute the Service without written authorization; (d) use AI-generated outputs as professional legal, financial, or investment advice without independent verification.</Section>
+              <Section t="5. AI-Generated Content Disclaimer">HyCRE.ai uses artificial intelligence to generate deal memos, lender matches, market analysis, and educational content. All AI-generated outputs are for informational purposes only and do not constitute legal, financial, investment, or professional advice. You are solely responsible for decisions made based on outputs from this Service.</Section>
+              <Section t="6. No Guarantee of Loan Approval">HyCRE.ai does not guarantee loan approval, funding, or any specific financial outcome. Lender matching and deal scoring are algorithmic estimates. All financing decisions are made solely by independent lenders.</Section>
+              <Section t="7. HMDA Data Usage">Our prospecting tools use publicly available HMDA (Home Mortgage Disclosure Act) data. Users are responsible for ensuring their outreach and marketing activities comply with all applicable federal and state laws, including the Fair Housing Act, Equal Credit Opportunity Act, and CAN-SPAM Act.</Section>
+              <Section t="8. Intellectual Property">All content, software, and tools on HyCRE.ai are owned by Huit.AI, Inc. or its licensors. The APEX scoring algorithm, TLS engine, and STDA methodology are patent-pending under USPTO Case No. TPS97949.</Section>
+              <Section t="9. Limitation of Liability">TO THE MAXIMUM EXTENT PERMITTED BY LAW, HUIT.AI, INC. SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES. OUR TOTAL LIABILITY SHALL NOT EXCEED THE AMOUNTS PAID BY YOU IN THE PRIOR 12 MONTHS.</Section>
+              <Section t="10. Termination">We reserve the right to suspend or terminate your account for violation of these Terms. You may cancel your subscription at any time through your account settings.</Section>
+              <Section t="11. Governing Law">These Terms are governed by the laws of the State of Alaska, United States. Disputes shall be resolved by binding arbitration in Anchorage, Alaska.</Section>
+              <Section t="12. Changes to Terms">We may update these Terms at any time. Continued use of the Service constitutes acceptance of the updated Terms. Material changes will be communicated by email.</Section>
+              <Section t="13. Contact">For questions about these Terms, contact: legal@hycre.ai | Huit.AI, Inc. | Anchorage, Alaska</Section>
+            </>
+          ) : (
+            <>
+              <Section t="1. Information We Collect">We collect: (a) Account information (name, email, password hash); (b) Payment information processed securely through ZenoPay (we do not store raw card data); (c) Usage data (features accessed, deals packaged, searches performed); (d) Communications you send us.</Section>
+              <Section t="2. How We Use Your Information">We use your information to: provide and improve the Service; send transactional emails (receipts, password resets, account notifications); send product updates and marketing communications (you may opt out); comply with legal obligations; detect and prevent fraud.</Section>
+              <Section t="3. Data Sharing">We do not sell your personal data. We share data only with: (a) ZenoPay for payment processing; (b) Anthropic for AI model inference (no personal data retained per Anthropic's API terms); (c) Service providers under confidentiality agreements; (d) Law enforcement when required by law.</Section>
+              <Section t="4. HMDA & Third-Party Data">Our prospecting tools use publicly available HMDA data published by the Consumer Financial Protection Bureau (CFPB). We do not sell or redistribute this data. Users are responsible for compliant use of prospecting outputs.</Section>
+              <Section t="5. Data Security">We use industry-standard security measures including TLS encryption, encrypted database storage, and access controls. However, no method of transmission over the internet is 100% secure.</Section>
+              <Section t="6. Data Retention">We retain your account data while your account is active and for 3 years after termination for legal and business purposes. You may request deletion of your data by emailing privacy@hycre.ai.</Section>
+              <Section t="7. Your Rights">Depending on your jurisdiction, you may have rights to: access, correct, or delete your personal data; opt out of marketing communications; data portability; lodge a complaint with a supervisory authority.</Section>
+              <Section t="8. Cookies">We use essential cookies for authentication and session management. We do not use tracking or advertising cookies. You may disable cookies in your browser settings.</Section>
+              <Section t="9. Children's Privacy">HyCRE.ai is not directed to individuals under 18. We do not knowingly collect personal information from minors.</Section>
+              <Section t="10. Contact">For privacy inquiries or data requests: privacy@hycre.ai | Huit.AI, Inc. | Anchorage, Alaska</Section>
+            </>
+          )}
+        </div>
+        <div style={{padding:"14px 24px",borderTop:`1px solid ${C.border}`,flexShrink:0}}>
+          <button onClick={onClose} style={{...btnGold,width:"100%",padding:"11px 0",fontSize:14}}>I've Read This — Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+function Section({t,children}){return<div style={{marginBottom:18}}><p style={{color:C.text,fontWeight:600,marginBottom:4}}>{t}</p><p>{children}</p></div>;}
+
+/* ─── CHECKOUT ─── */
 function Checkout({tier,onBack,onSuccess}) {
   const [step,setStep]=useState(1);
   const [form,setForm]=useState({name:"",email:"",card:"",exp:"",cvv:""});
+  const [tosAccepted,setTosAccepted]=useState(false);
   const [showCvv,setShowCvv]=useState(false);
   const [loading,setLoading]=useState(false);
   const [errors,setErrors]=useState({});
+  const [legalModal,setLegalModal]=useState(null);
+  const [payError,setPayError]=useState("");
   const f=k=>v=>setForm(p=>({...p,[k]:v}));
+
   const validate=()=>{
     const e={};
     if(!form.name.trim())e.name="Required";
     if(!form.email.includes("@"))e.email="Valid email required";
+    if(step===1&&!tosAccepted)e.tos="You must accept the Terms of Service and Privacy Policy to continue";
     if(step===2){if(form.card.replace(/\s/g,"").length<16)e.card="Valid card required";if(!form.exp.match(/^\d{2}\/\d{2}$/))e.exp="MM/YY";if(form.cvv.length<3)e.cvv="3-4 digits";}
     setErrors(e);return Object.keys(e).length===0;
   };
-  const next=()=>{
+
+  const next=async()=>{
     if(!validate())return;
     if(step===1){setStep(2);return;}
-    setLoading(true);setTimeout(()=>{setLoading(false);setStep(3);},1800);
+    setLoading(true);setPayError("");
+    try {
+      // Process payment via ZenoPay
+      const res = await fetch("/api/payment", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({tier:tier.id,name:form.name,email:form.email,amount:tier.price,period:tier.period,card:form.card,exp:form.exp,cvv:form.cvv})
+      });
+      const data = await res.json();
+      if(!res.ok||!data.success){setPayError(data.error||"Payment failed. Please check your card details.");setLoading(false);return;}
+      // Notify admin of new signup
+      await fetch("/api/notify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"new_signup",name:form.name,email:form.email,tier:tier.id,amount:`${tier.price}${tier.period}`})});
+      setStep(3);
+    } catch(err){
+      setPayError("Connection error. Please try again.");
+    }
+    setLoading(false);
   };
+
   if(step===3) return (
     <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+      {legalModal&&<LegalModal type={legalModal} onClose={()=>setLegalModal(null)}/>}
       <div style={{background:C.surface,border:`1px solid ${C.borderGold}`,borderRadius:20,padding:52,textAlign:"center",maxWidth:460,width:"100%",animation:"fadeUp .5s ease"}}>
         <div style={{width:68,height:68,borderRadius:"50%",background:C.successBg,border:`2px solid ${C.success}`,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px"}}><Check size={30} color={C.success}/></div>
         <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:34,fontWeight:600,color:C.white,marginBottom:10}}>You're In.</h2>
@@ -392,8 +473,10 @@ function Checkout({tier,onBack,onSuccess}) {
       </div>
     </div>
   );
+
   return (
     <div style={{minHeight:"100vh",background:C.bg,padding:24}}>
+      {legalModal&&<LegalModal type={legalModal} onClose={()=>setLegalModal(null)}/>}
       <div style={{maxWidth:960,margin:"0 auto"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 0 40px"}}><Logo/><button onClick={onBack} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",display:"flex",alignItems:"center",gap:6,fontSize:14,fontFamily:"'DM Sans',sans-serif"}}><X size={15}/>Cancel</button></div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 280px",gap:32,alignItems:"start"}}>
@@ -411,18 +494,40 @@ function Checkout({tier,onBack,onSuccess}) {
               <h3 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:24,color:C.white,marginBottom:22}}>Create Your Account</h3>
               <FI label="Full Name" val={form.name} set={f("name")} ph="Your Name" err={errors.name}/>
               <FI label="Email Address" val={form.email} set={f("email")} ph="you@example.com" err={errors.email}/>
+              {/* TOS Acceptance */}
+              <div style={{marginTop:20,padding:16,background:C.card,borderRadius:10,border:`1px solid ${errors.tos?C.danger:tosAccepted?C.successBorder:C.border}`,transition:"border-color .2s"}}>
+                <div style={{display:"flex",alignItems:"flex-start",gap:12,cursor:"pointer"}} onClick={()=>setTosAccepted(s=>!s)}>
+                  <div style={{width:18,height:18,borderRadius:4,border:`2px solid ${tosAccepted?C.success:C.muted}`,background:tosAccepted?C.success:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1,transition:"all .2s"}}>
+                    {tosAccepted&&<Check size={11} color={C.bg}/>}
+                  </div>
+                  <p style={{fontSize:12,color:C.muted,lineHeight:1.6,userSelect:"none"}}>
+                    I have read and agree to HyCRE.ai's{" "}
+                    <span onClick={e=>{e.stopPropagation();setLegalModal("tos");}} style={{color:C.gold,cursor:"pointer",textDecoration:"underline"}}>Terms of Service</span>
+                    {" "}and{" "}
+                    <span onClick={e=>{e.stopPropagation();setLegalModal("pp");}} style={{color:C.gold,cursor:"pointer",textDecoration:"underline"}}>Privacy Policy</span>.
+                    I understand that AI-generated outputs are for informational purposes only and do not constitute professional financial or legal advice.
+                  </p>
+                </div>
+              </div>
+              {errors.tos&&<p style={{fontSize:11,color:C.danger,marginTop:6}}>{errors.tos}</p>}
             </div>}
             {step===2&&<div className="ai">
-              <h3 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:24,color:C.white,marginBottom:22}}>Payment Details</h3>
+              <h3 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:24,color:C.white,marginBottom:6}}>Payment Details</h3>
+              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:18}}>
+                <div style={{width:18,height:18,background:`${C.goldMuted}33`,border:`1px solid ${C.borderGold}`,borderRadius:3,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:8,color:C.gold,fontFamily:"'DM Mono',monospace"}}>ZP</span></div>
+                <span style={{fontSize:11,color:C.muted}}>Processed securely by <span style={{color:C.gold}}>ZenoPay.ai</span></span>
+              </div>
               <FI label="Card Number" val={form.card} set={v=>{const d=v.replace(/\D/g,"").slice(0,16);setForm(p=>({...p,card:d.replace(/(\d{4})(?=\d)/g,"$1 ")}));}} ph="4242 4242 4242 4242" err={errors.card} mono/>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
                 <FI label="Expiry" val={form.exp} set={v=>{let d=v.replace(/\D/g,"").slice(0,4);if(d.length>=2)d=d.slice(0,2)+"/"+d.slice(2);setForm(p=>({...p,exp:d}));}} ph="MM/YY" err={errors.exp}/>
                 <FI label="CVV" val={form.cvv} set={v=>setForm(p=>({...p,cvv:v.replace(/\D/g,"").slice(0,4)}))} ph="123" type={showCvv?"text":"password"} err={errors.cvv} suffix={<button type="button" onClick={()=>setShowCvv(s=>!s)} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:0}}>{showCvv?<EyeOff size={13}/>:<Eye size={13}/>}</button>}/>
               </div>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6}}><Shield size={13} color={C.success}/><span style={{fontSize:11,color:C.muted}}>256-bit SSL · PCI DSS compliant</span></div>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginTop:8}}><Shield size={13} color={C.success}/><span style={{fontSize:11,color:C.muted}}>256-bit SSL · PCI DSS compliant · Powered by ZenoPay.ai</span></div>
+              {payError&&<div style={{marginTop:12,padding:"10px 14px",background:C.dangerBg,border:`1px solid ${C.dangerBorder}`,borderRadius:8,fontSize:12,color:C.danger}}>{payError}</div>}
             </div>}
             <button onClick={next} disabled={loading} style={{...btnGold,width:"100%",padding:"13px 0",fontSize:15,marginTop:24,display:"flex",alignItems:"center",justifyContent:"center",gap:10,opacity:loading?.7:1}}>
-              {loading?"Processing...":`${step===1?"Continue to Payment":`Pay ${tier.price}${tier.period}`}`}{!loading&&<ArrowRight size={17}/>}
+              {loading?<><div style={{width:14,height:14,border:`2px solid ${C.bg}55`,borderTopColor:C.bg,borderRadius:"50%",animation:"spin 1s linear infinite"}}/>Processing...</>
+              :<>{step===1?"Continue to Payment":`Pay ${tier.price}${tier.period}`}<ArrowRight size={17}/></>}
             </button>
           </div>
           <div style={{background:C.card,border:`1px solid ${C.borderGold}`,borderRadius:14,padding:24,position:"sticky",top:24}}>
@@ -434,7 +539,10 @@ function Checkout({tier,onBack,onSuccess}) {
                 <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:700,color:C.goldBright}}>{tier.price}</span>
               </div>
             </div>
-            {tier.features.slice(0,4).map((f,i)=><div key={i} style={{display:"flex",gap:8,marginBottom:8}}><Check size={11} color={C.success} style={{marginTop:2,flexShrink:0}}/><span style={{fontSize:11,color:C.muted}}>{f}</span></div>)}
+            {tier.features.slice(0,4).map((feat,i)=><div key={i} style={{display:"flex",gap:8,marginBottom:8}}><Check size={11} color={C.success} style={{marginTop:2,flexShrink:0}}/><span style={{fontSize:11,color:C.muted}}>{feat}</span></div>)}
+            <div style={{marginTop:16,padding:"10px 12px",background:`${C.goldMuted}11`,borderRadius:7,border:`1px solid ${C.borderGold}`}}>
+              <p style={{fontSize:10,color:C.muted,lineHeight:1.5}}>By completing purchase you confirm acceptance of our <span style={{color:C.gold}}>Terms of Service</span> and <span style={{color:C.gold}}>Privacy Policy</span>.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -447,21 +555,76 @@ function Login({onBack,onSuccess}) {
   const [form,setForm]=useState({email:"",password:""});
   const [showPw,setShowPw]=useState(false);
   const [loading,setLoading]=useState(false);
-  const handle=()=>{if(!form.email||!form.password)return;setLoading(true);setTimeout(()=>{setLoading(false);onSuccess({name:"User",email:form.email,tier:"active"});},1400);};
+  const [mode,setMode]=useState("login"); // login | reset
+  const [resetSent,setResetSent]=useState(false);
+  const [resetEmail,setResetEmail]=useState("");
+  const [legalModal,setLegalModal]=useState(null);
+
+  const handle=()=>{
+    if(!form.email||!form.password)return;
+    setLoading(true);
+    setTimeout(()=>{setLoading(false);onSuccess({name:"User",email:form.email,tier:"active"});},1400);
+  };
+
+  const sendReset=async()=>{
+    if(!resetEmail.includes("@"))return;
+    setLoading(true);
+    await fetch("/api/reset-password",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:resetEmail})});
+    setLoading(false);setResetSent(true);
+  };
+
   return (
     <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column"}}>
+      {legalModal&&<LegalModal type={legalModal} onClose={()=>setLegalModal(null)}/>}
       <div style={{padding:"20px 24px 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}><Logo/><button onClick={onBack} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:13,fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:5}}><X size={14}/>Back</button></div>
       <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
         <div style={{width:"100%",maxWidth:380,background:C.surface,border:`1px solid ${C.border}`,borderRadius:20,padding:38,animation:"fadeUp .5s ease"}}>
-          <div style={{textAlign:"center",marginBottom:28}}>
-            <div style={{width:48,height:48,background:`${C.goldMuted}22`,border:`1px solid ${C.borderGold}`,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}><Shield size={20} color={C.gold}/></div>
-            <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:600,color:C.white}}>Sign In</h2>
-            <p style={{fontSize:13,color:C.muted,marginTop:4}}>Access your HyCRE dashboard</p>
-          </div>
-          <FI label="Email" val={form.email} set={v=>setForm(p=>({...p,email:v}))} ph="you@example.com"/>
-          <FI label="Password" val={form.password} set={v=>setForm(p=>({...p,password:v}))} ph="••••••••" type={showPw?"text":"password"} suffix={<button type="button" onClick={()=>setShowPw(s=>!s)} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:0}}>{showPw?<EyeOff size={13}/>:<Eye size={13}/>}</button>}/>
-          <button onClick={handle} disabled={loading} style={{...btnGold,width:"100%",padding:"12px 0",fontSize:14,marginTop:6}}>{loading?"Signing In...":"Sign In"}</button>
-          <p style={{textAlign:"center",marginTop:18,fontSize:12,color:C.muted}}>No account? <span style={{color:C.gold,cursor:"pointer"}} onClick={onBack}>Get started →</span></p>
+          {mode==="reset" ? (
+            <>
+              <div style={{textAlign:"center",marginBottom:24}}>
+                <div style={{width:46,height:46,background:`${C.goldMuted}22`,border:`1px solid ${C.borderGold}`,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px"}}><Shield size={19} color={C.gold}/></div>
+                <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:600,color:C.white}}>Reset Password</h2>
+                <p style={{fontSize:12,color:C.muted,marginTop:4}}>Enter your email and we'll send a reset link</p>
+              </div>
+              {resetSent ? (
+                <div style={{background:C.successBg,border:`1px solid ${C.successBorder}`,borderRadius:10,padding:18,textAlign:"center"}}>
+                  <p style={{color:C.success,fontSize:14,marginBottom:6}}>✓ Reset link sent</p>
+                  <p style={{color:C.muted,fontSize:12}}>Check your inbox at {resetEmail}</p>
+                </div>
+              ) : (
+                <>
+                  <FI label="Email Address" val={resetEmail} set={setResetEmail} ph="you@example.com"/>
+                  <button onClick={sendReset} disabled={loading} style={{...btnGold,width:"100%",padding:"11px 0",fontSize:14,marginTop:4,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                    {loading?<><div style={{width:13,height:13,border:`2px solid ${C.bg}55`,borderTopColor:C.bg,borderRadius:"50%",animation:"spin 1s linear infinite"}}/>Sending...</>:"Send Reset Link"}
+                  </button>
+                </>
+              )}
+              <p style={{textAlign:"center",marginTop:16,fontSize:12,color:C.muted,cursor:"pointer"}} onClick={()=>{setMode("login");setResetSent(false);}}>← Back to Sign In</p>
+            </>
+          ) : (
+            <>
+              <div style={{textAlign:"center",marginBottom:28}}>
+                <div style={{width:48,height:48,background:`${C.goldMuted}22`,border:`1px solid ${C.borderGold}`,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}><Shield size={20} color={C.gold}/></div>
+                <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:600,color:C.white}}>Sign In</h2>
+                <p style={{fontSize:13,color:C.muted,marginTop:4}}>Access your HyCRE dashboard</p>
+              </div>
+              <FI label="Email" val={form.email} set={v=>setForm(p=>({...p,email:v}))} ph="you@example.com"/>
+              <FI label="Password" val={form.password} set={v=>setForm(p=>({...p,password:v}))} ph="••••••••" type={showPw?"text":"password"} suffix={<button type="button" onClick={()=>setShowPw(s=>!s)} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:0}}>{showPw?<EyeOff size={13}/>:<Eye size={13}/>}</button>}/>
+              <div style={{textAlign:"right",marginBottom:16,marginTop:-6}}>
+                <span onClick={()=>setMode("reset")} style={{fontSize:11,color:C.gold,cursor:"pointer"}}>Forgot password?</span>
+              </div>
+              <button onClick={handle} disabled={loading} style={{...btnGold,width:"100%",padding:"12px 0",fontSize:14}}>{loading?"Signing In...":"Sign In"}</button>
+              <div style={{marginTop:20,padding:"12px 14px",background:C.card,borderRadius:8,border:`1px solid ${C.border}`}}>
+                <p style={{fontSize:11,color:C.muted,textAlign:"center",lineHeight:1.6}}>
+                  By signing in you agree to our{" "}
+                  <span onClick={()=>setLegalModal("tos")} style={{color:C.gold,cursor:"pointer"}}>Terms of Service</span>
+                  {" "}and{" "}
+                  <span onClick={()=>setLegalModal("pp")} style={{color:C.gold,cursor:"pointer"}}>Privacy Policy</span>
+                </p>
+              </div>
+              <p style={{textAlign:"center",marginTop:16,fontSize:12,color:C.muted}}>No account? <span style={{color:C.gold,cursor:"pointer"}} onClick={onBack}>Get started →</span></p>
+            </>
+          )}
         </div>
       </div>
     </div>
