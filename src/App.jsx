@@ -1485,75 +1485,341 @@ function ProspectingEngine() {
 }
 
 /* ─── DEAL PACKAGER ─── */
+const DP_FORMATS=[
+  {id:"full",label:"Full Lender Package",desc:"Complete 2,000-word institutional memo — 8 sections",badge:"MOST USED"},
+  {id:"teaser",label:"Lender Teaser",desc:"One-page executive summary for initial outreach",badge:null},
+  {id:"agency",label:"Agency/CMBS Screen",desc:"Structured checklist format for Fannie/Freddie/conduit",badge:null},
+];
 function DealPackager() {
-  const [form,setForm]=useState({propType:"Multifamily",address:"",price:"",noi:"",ltv:"70",rate:"6.75",amort:"25",purpose:"Acquisition",market:"Anchorage, AK",sponsor:""});
+  const [tab,setTab]=useState("inputs");
+  const [fmt,setFmt]=useState("full");
+  const [form,setForm]=useState({
+    propType:"Multifamily",address:"",city:"",state:"AK",zipCode:"",yearBuilt:"",units:"",sqft:"",occupancy:"95",description:"",
+    price:"",noi:"",gpr:"",vacancy:"5",ltv:"70",rate:"6.75",amort:"25",ioYears:"0",purpose:"Acquisition",
+    rehabBudget:"",stabilizedNOI:"",
+    sponsor:"",sponsorExp:"",netWorth:"",liquidity:"",
+    market:"Anchorage, AK",submarket:"",
+    existingLoan:"",existingRate:"",existingMaturity:"",
+  });
   const [output,setOutput]=useState(null);
-  const [loading,setLoading]=useState(false);
   const [apexData,setApexData]=useState(null);
+  const [loading,setLoading]=useState(false);
+  const [loadingMsg,setLoadingMsg]=useState("");
+  const [topLenders,setTopLenders]=useState([]);
+  const [copied,setCopied]=useState(false);
   const f=k=>v=>setForm(p=>({...p,[k]:v}));
-  const p2=parseFloat(form.price)||0,noi=parseFloat(form.noi)||0,ltvN=parseFloat(form.ltv)/100||0,r=parseFloat(form.rate)/100/12||0,am=parseFloat(form.amort)*12;
-  const loan=p2*ltvN,mPmt=r>0?loan*(r*Math.pow(1+r,am))/(Math.pow(1+r,am)-1):0,annDebt=mPmt*12;
-  const capRate=p2>0?((noi/p2)*100).toFixed(2):0,dscr=annDebt>0?(noi/annDebt).toFixed(2):0;
+
+  const price=parseFloat(form.price)||0,noi=parseFloat(form.noi)||0;
+  const gpr=parseFloat(form.gpr)||0;
+  const ltvN=parseFloat(form.ltv)/100||0.70,rateN=parseFloat(form.rate)||6.75,amortN=parseFloat(form.amort)||25;
+  const ioYrs=parseInt(form.ioYears)||0;
+  const loan=price*ltvN,r=rateN/100/12,n=amortN*12;
+  const mPmt=ioYrs>0?loan*(rateN/100/12):(r>0?loan*(r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1):0);
+  const annDebt=mPmt*12,equity=price*(1-ltvN);
+  const capRate=price>0?noi/price*100:0,dscr=annDebt>0?noi/annDebt:0;
+  const coc=equity>0?(noi-annDebt)/equity*100:0,debtYield=loan>0?noi/loan*100:0;
+  const units=parseInt(form.units)||0,pricePerUnit=units>0?price/units:0;
+  const grm=gpr>0?price/gpr:0;
+  const rehabBudget=parseFloat(form.rehabBudget)||0,closingCosts=price*0.02;
+  const totalUses=price+rehabBudget+closingCosts,srcDebt=loan,srcEquity=totalUses-srcDebt;
+  const canGenerate=form.address&&form.price&&form.noi;
+
+  const metrics=[
+    {l:"Cap Rate",v:`${capRate.toFixed(2)}%`,ok:capRate>=5.5},
+    {l:"DSCR",v:`${dscr.toFixed(2)}x`,ok:dscr>=1.25},
+    {l:"LTV",v:`${form.ltv}%`,ok:ltvN<=0.75},
+    {l:"Debt Yield",v:`${debtYield.toFixed(1)}%`,ok:debtYield>=8},
+    {l:"Loan Amount",v:`$${Math.round(loan/1000)}K`,ok:true},
+    {l:"Ann. Debt Svc",v:`$${Math.round(annDebt/1000)}K`,ok:true},
+    {l:"Cash-on-Cash",v:`${coc.toFixed(1)}%`,ok:coc>=5},
+    {l:"Equity Req.",v:`$${Math.round(equity/1000)}K`,ok:true},
+  ];
+
   const generate=async()=>{
-    if(!form.address||!form.price||!form.noi)return;
-    setLoading(true);setOutput(null);
-    const sc=calcAPEXScore({capRate,dscr,ltv:form.ltv,propType:form.propType,purpose:form.purpose});
+    if(!canGenerate){alert("Address, price, and NOI are required.");return;}
+    setLoading(true);setOutput(null);setTab("output");
+    const sc=calcAPEXScore({capRate:capRate.toFixed(2),dscr:dscr.toFixed(2),ltv:form.ltv,propType:form.propType,purpose:form.purpose});
     setApexData(sc);
-    try{const r=await callAI("You are a senior CRE capital markets advisor. Generate a professional, lender-ready executive deal summary. Use ### headers: PROPERTY OVERVIEW, FINANCIAL SUMMARY, DEBT STRUCTURE, MARKET CONTEXT, LENDER VALUE PROPOSITION. Be specific and data-driven. 350 words.","Package this deal:\nType: "+form.propType+"\nAddress: "+form.address+"\nPrice: $"+Number(form.price).toLocaleString()+"\nNOI: $"+Number(form.noi).toLocaleString()+"/yr\nCap Rate: "+capRate+"%\nLoan: $"+Math.round(loan).toLocaleString()+" ("+form.ltv+"% LTV)\nDSCR: "+dscr+"x\nRate: "+form.rate+"%\nAmort: "+form.amort+"yr\nPurpose: "+form.purpose+"\nMarket: "+form.market+"\nSponsor: "+(form.sponsor||"Experienced operator"));setOutput(r);}
-    catch{setOutput("Error generating memo.");}
-    setLoading(false);
+    const matched=matchLenders({propType:form.propType,loanAmt:loan,ltv:form.ltv,dscr:dscr.toFixed(2),state:form.state,purpose:form.purpose});
+    setTopLenders(matched.filter(l=>l.eligible).slice(0,5));
+    const msgs=["Underwriting deal parameters...","Calculating key metrics...","Structuring executive memo...","Building lender narrative...","Finalizing package..."];
+    let mi=0;const ticker=setInterval(()=>{setLoadingMsg(msgs[mi%msgs.length]);mi++;},1400);
+    const prompts={
+      full:`You are a senior CRE capital markets advisor at an institutional advisory firm. Generate a complete 2,000-word lender submission package with EXACTLY these 8 section headers (use ## before each):
+## EXECUTIVE SUMMARY
+## PROPERTY OVERVIEW
+## FINANCIAL ANALYSIS
+## DEBT STRUCTURE & SIZING
+## MARKET ANALYSIS & POSITION
+## SPONSORSHIP & EXPERIENCE
+## INVESTMENT THESIS & VALUE PROPOSITION
+## RISK FACTORS & MITIGANTS
+Rules: Use **bold** for key metrics. Include specific numbers in every section. Write at Walker & Dunlop / CBRE advisory quality. Each section minimum 200 words. Risk section must include specific mitigants. Include market comparables and benchmarks.`,
+      teaser:`You are a senior CRE capital markets advisor. Write a 500-word lender teaser with EXACTLY these sections (## before each):
+## THE OPPORTUNITY
+## KEY METRICS AT A GLANCE
+## WHY THIS DEAL
+## SPONSOR SNAPSHOT
+## NEXT STEPS
+Lead with the strongest hook. Tight, clean, professional. Use bold for metrics. Goal: get a lender on a call.`,
+      agency:`You are a senior CRE underwriter preparing an agency/CMBS eligibility screen. Use EXACTLY these sections (## before each):
+## PROPERTY ELIGIBILITY CHECKLIST
+## FINANCIAL QUALIFICATION MATRIX
+## BORROWER/SPONSOR QUALIFICATION
+## LOAN STRUCTURING RECOMMENDATION
+## RED FLAGS & OPEN ITEMS
+For each item: clearly state PASS, FAIL, or NEEDS VERIFICATION with the specific number. Conclude with ELIGIBLE / CONDITIONAL / INELIGIBLE ruling.`,
+    };
+    const dealData=`PROPERTY: ${form.propType} | ${form.address}${form.city?`, ${form.city}`:""}${form.state?`, ${form.state}`:""} ${form.zipCode}
+Year Built: ${form.yearBuilt||"N/A"} | Units: ${form.units||"N/A"} | SF: ${form.sqft||"N/A"} | Occupancy: ${form.occupancy}%
+Description: ${form.description||"Standard "+form.propType+" asset"}
+
+FINANCIALS:
+Purchase Price: $${Number(form.price).toLocaleString()}
+Gross Potential Rent: $${Number(gpr||0).toLocaleString()}/yr
+Annual NOI: $${Number(form.noi).toLocaleString()}/yr (Vacancy: ${form.vacancy}%)
+Cap Rate: ${capRate.toFixed(2)}% | GRM: ${grm>0?grm.toFixed(1)+"x":"N/A"}
+${rehabBudget>0?`Rehab Budget: $${Number(rehabBudget).toLocaleString()} | Stabilized NOI: $${Number(form.stabilizedNOI||form.noi).toLocaleString()}`:""}
+
+DEBT:
+Loan: $${Math.round(loan).toLocaleString()} (${form.ltv}% LTV) | Rate: ${form.rate}%${ioYrs>0?` (${ioYrs}-yr IO)`:""}
+Amort: ${form.amort}yr | DSCR: ${dscr.toFixed(2)}x | Debt Yield: ${debtYield.toFixed(2)}%
+Ann. Debt Service: $${Math.round(annDebt).toLocaleString()} | Purpose: ${form.purpose}
+${form.existingLoan?`Existing: $${Number(form.existingLoan).toLocaleString()} @ ${form.existingRate}% — ${form.existingMaturity}mo remaining`:""}
+
+SPONSOR: ${form.sponsor||"Experienced CRE operator"}
+Experience: ${form.sponsorExp||"To be provided"} | Net Worth: ${form.netWorth||"TBP"} | Liquidity: ${form.liquidity||"TBP"}
+
+MARKET: ${form.market}${form.submarket?` — ${form.submarket} submarket`:""} 
+APEX SCORE: ${sc.score}/100 (${sc.grade})`;
+    try{const r=await callAI(prompts[fmt],dealData);setOutput(r);}
+    catch{setOutput("Error generating memo. Please try again.");}
+    clearInterval(ticker);setLoading(false);setLoadingMsg("");
   };
+
+  const copyMemo=()=>{if(!output)return;navigator.clipboard.writeText(output).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2500);});};
   const gcol=!apexData?C.muted:apexData.score>=75?C.success:apexData.score>=55?C.goldBright:C.warn;
-  return (
-    <div className="au" style={{maxWidth:1060}}>
-      <h2 style={H2}>Deal Packager AI</h2>
-      <p style={{...Sub,marginBottom:22}}>Input deal parameters → lender-ready executive memo with APEX score in seconds.</p>
-      <div style={{display:"grid",gridTemplateColumns:"340px 1fr",gap:18}}>
-        <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:22}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-            <div style={{gridColumn:"1/-1"}}><FL l="Property Type"/><Sel val={form.propType} set={f("propType")} opts={PROP_TYPES}/></div>
-            <div style={{gridColumn:"1/-1"}}><FL l="Address"/><Inp val={form.address} set={f("address")} ph="123 Main St, Anchorage AK"/></div>
-            <div><FL l="Purchase Price ($)"/><Inp val={form.price} set={v=>f("price")(v.replace(/\D/g,""))} ph="2500000" mono/></div>
-            <div><FL l="Annual NOI ($)"/><Inp val={form.noi} set={v=>f("noi")(v.replace(/\D/g,""))} ph="175000" mono/></div>
-            <div><FL l="LTV (%)"/><Inp val={form.ltv} set={v=>f("ltv")(v.replace(/\D/g,"").slice(0,2))} ph="70" mono/></div>
-            <div><FL l="Rate (%)"/><Inp val={form.rate} set={f("rate")} ph="6.75" mono/></div>
-            <div style={{gridColumn:"1/-1"}}><FL l="Loan Purpose"/><Sel val={form.purpose} set={f("purpose")} opts={LOAN_PURPOSES}/></div>
-            <div style={{gridColumn:"1/-1"}}><FL l="Market"/><Inp val={form.market} set={f("market")} ph="Anchorage, AK"/></div>
-            <div style={{gridColumn:"1/-1"}}><FL l="Sponsor / Firm"/><Inp val={form.sponsor} set={f("sponsor")} ph="Huit Capital Partners"/></div>
-          </div>
-          {p2>0&&noi>0&&<div style={{marginTop:14,background:C.card2,borderRadius:8,padding:12,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            {[{l:"Cap Rate",v:`${capRate}%`,ok:parseFloat(capRate)>=5},{l:"Loan Amt",v:`$${Math.round(loan/1000)}K`,ok:true},{l:"DSCR",v:`${dscr}x`,ok:parseFloat(dscr)>=1.25},{l:"Ann Debt",v:`$${Math.round(annDebt/1000)}K`,ok:true}].map((m,i)=>(
-              <div key={i}><div style={{fontSize:9,color:C.muted}}>{m.l}</div><div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:m.ok?C.success:C.warn}}>{m.v}</div></div>
-            ))}
-          </div>}
-          <button onClick={generate} disabled={loading||!form.address||!form.price||!form.noi} style={{...btnGold,width:"100%",marginTop:14,padding:"11px 0",display:"flex",alignItems:"center",justifyContent:"center",gap:7,opacity:loading?.7:1}}><Zap size={14}/>{loading?"Generating...":"Generate Package + APEX Score"}</button>
-        </div>
-        <div>
-          {!output&&!loading&&<div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:400,opacity:.5}}><FileText size={36} color={C.muted} style={{marginBottom:10}}/><p style={{color:C.muted,fontSize:13}}>Fill parameters and generate</p></div>}
-          {loading&&<div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:400}}><div style={{width:28,height:28,border:`2px solid ${C.borderGold}`,borderTopColor:C.goldBright,borderRadius:"50%",animation:"spin 1s linear infinite",marginBottom:12}}/><p style={{color:C.muted,fontSize:13}}>Generating memo + APEX score...</p></div>}
-          {output&&apexData&&<div className="ai">
-            <div style={{background:`linear-gradient(135deg, ${C.card}, ${C.card2})`,border:`1px solid ${C.borderGold}`,borderRadius:14,padding:22,marginBottom:14}}>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}><div style={{display:"flex",alignItems:"center",gap:8}}><Award size={16} color={C.gold}/><span style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:C.gold,letterSpacing:".1em"}}>APEX DEAL SCORE</span></div><div style={{display:"flex",alignItems:"baseline",gap:8}}><span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:44,fontWeight:700,color:gcol,lineHeight:1}}>{apexData.score}</span><span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,color:gcol}}>{apexData.grade}</span></div></div>
-              {apexData.factors.map((fac,i)=>(
-                <div key={i} style={{marginBottom:10}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontSize:11,color:C.muted}}>{fac.name}</span><span style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:fac.grade==="A"?C.success:fac.grade==="B"?C.goldBright:fac.grade==="C"?C.warn:C.danger}}>{fac.grade} {fac.score}/{fac.max}</span></div>
-                  <div style={{height:3,background:C.border,borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",width:`${(fac.score/fac.max)*100}%`,background:fac.grade==="A"?C.success:fac.grade==="B"?C.gold:fac.grade==="C"?C.warn:C.danger,transition:"width .5s"}}/></div>
-                </div>
-              ))}
-            </div>
-            <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:24}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,color:C.white}}>Executive Deal Memo</span><button onClick={()=>window.print()} style={{...btnOutline,padding:"5px 12px",fontSize:11,display:"flex",alignItems:"center",gap:5}}><Download size={11}/>PDF</button></div>
-              <div style={{fontSize:13,color:C.text,lineHeight:1.8,whiteSpace:"pre-wrap"}}>
-                {output.split('\n').map((line,i)=>{
-                  if(line.startsWith('###'))return<h4 key={i} style={{fontFamily:"'Cormorant Garamond',serif",fontSize:16,color:C.gold,marginTop:16,marginBottom:5,fontWeight:600}}>{line.replace('###','').trim()}</h4>;
-                  if(line.startsWith('**')&&line.endsWith('**'))return<p key={i} style={{fontWeight:600,color:C.white}}>{line.replace(/\*\*/g,'')}</p>;
-                  return<p key={i}>{line}</p>;
-                })}
-              </div>
-            </div>
-          </div>}
+
+  return(
+    <div className="au" style={{maxWidth:1100}}>
+      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:12,marginBottom:20}}>
+        <div><h2 style={H2}>Deal Packager AI</h2><p style={{...Sub,marginBottom:0}}>Professional lender-ready packages in seconds. Three formats, APEX scoring, auto lender matching.</p></div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {output&&<button onClick={copyMemo} style={{...btnOutline,padding:"7px 16px",fontSize:12,display:"flex",alignItems:"center",gap:5}}>{copied?<><CheckCircle size={11} color={C.success}/>Copied!</>:<><Copy size={11}/>Copy Memo</>}</button>}
+          {output&&<button onClick={()=>window.print()} style={{...btnOutline,padding:"7px 16px",fontSize:12,display:"flex",alignItems:"center",gap:5}}><Download size={11}/>Print PDF</button>}
+          {output&&<button onClick={()=>{setOutput(null);setApexData(null);setTopLenders([]);setTab("inputs");}} style={{background:"none",border:`1px solid ${C.border}`,color:C.muted,borderRadius:8,padding:"7px 14px",fontSize:12,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>New Deal</button>}
         </div>
       </div>
+
+      {/* Format selector */}
+      <div style={{display:"flex",gap:10,marginBottom:18,flexWrap:"wrap"}}>
+        {DP_FORMATS.map(d=>(
+          <div key={d.id} onClick={()=>setFmt(d.id)} style={{flex:1,minWidth:180,background:C.surface,border:`2px solid ${fmt===d.id?C.borderGold:C.border}`,borderRadius:12,padding:"12px 16px",cursor:"pointer",transition:"border-color .2s"}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+              <div style={{width:7,height:7,borderRadius:"50%",background:fmt===d.id?C.gold:C.border}}/>
+              <span style={{fontSize:13,fontWeight:600,color:fmt===d.id?C.white:C.muted}}>{d.label}</span>
+              {d.badge&&<span style={{fontSize:8,padding:"1px 6px",borderRadius:3,background:`${C.goldMuted}33`,color:C.gold,fontFamily:"'DM Mono',monospace"}}>{d.badge}</span>}
+            </div>
+            <p style={{fontSize:11,color:C.dim,marginLeft:13}}>{d.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Tab nav (only after generate) */}
+      {output&&<div style={{display:"flex",gap:8,marginBottom:18}}>
+        {[["inputs","✏️ Edit Inputs"],["output","📄 Memo Package"]].map(([v,l])=>(
+          <button key={v} onClick={()=>setTab(v)} style={{padding:"8px 20px",borderRadius:8,border:`1px solid ${tab===v?C.borderGold:C.border}`,background:tab===v?`${C.goldMuted}18`:"transparent",color:tab===v?C.gold:C.muted,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:tab===v?600:400}}>{l}</button>
+        ))}
+      </div>}
+
+      {/* INPUTS */}
+      {tab==="inputs"&&(
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <div style={P}>
+              <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.gold,letterSpacing:".1em",marginBottom:12}}>PROPERTY</div>
+              <div style={{marginBottom:10}}><FL l="Property Type"/><Sel val={form.propType} set={f("propType")} opts={PROP_TYPES}/></div>
+              <div style={{marginBottom:10}}><FL l="Street Address"/><Inp val={form.address} set={f("address")} ph="123 Main Street"/></div>
+              <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:8,marginBottom:10}}>
+                <div><FL l="City"/><Inp val={form.city} set={f("city")} ph="Anchorage"/></div>
+                <div><FL l="State"/><Inp val={form.state} set={f("state")} ph="AK"/></div>
+                <div><FL l="Zip"/><Inp val={form.zipCode} set={f("zipCode")} ph="99501"/></div>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
+                <div><FL l="Year Built"/><Inp val={form.yearBuilt} set={f("yearBuilt")} ph="1998" mono/></div>
+                <div><FL l="Units"/><Inp val={form.units} set={f("units")} ph="24" mono/></div>
+                <div><FL l="Sqft"/><Inp val={form.sqft} set={f("sqft")} ph="18000" mono/></div>
+              </div>
+              <div style={{marginBottom:10}}><FL l="Occupancy (%)"/><Inp val={form.occupancy} set={f("occupancy")} ph="95" mono/></div>
+              <div><FL l="Property Description"/><textarea value={form.description} onChange={e=>f("description")(e.target.value)} placeholder="3-story garden-style MF, renovated interiors, covered parking..." rows={3} style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 12px",fontSize:12,color:C.text,fontFamily:"'DM Sans',sans-serif",resize:"vertical",boxSizing:"border-box",outline:"none",lineHeight:1.6}}/></div>
+            </div>
+            <div style={P}>
+              <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.blue,letterSpacing:".1em",marginBottom:12}}>SPONSOR / BORROWER</div>
+              <div style={{marginBottom:10}}><FL l="Sponsor / Entity Name"/><Inp val={form.sponsor} set={f("sponsor")} ph="Huit Capital Partners LLC"/></div>
+              <div style={{marginBottom:10}}><FL l="CRE Experience"/><Inp val={form.sponsorExp} set={f("sponsorExp")} ph="18 years, $85M in transactions"/></div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <div><FL l="Net Worth"/><Inp val={form.netWorth} set={f("netWorth")} ph="$4.2M" mono/></div>
+                <div><FL l="Liquidity"/><Inp val={form.liquidity} set={f("liquidity")} ph="$800K" mono/></div>
+              </div>
+            </div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <div style={P}>
+              <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.teal,letterSpacing:".1em",marginBottom:12}}>FINANCIALS</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <div style={{marginBottom:10}}><FL l="Purchase Price ($)"/><Inp val={form.price} set={v=>f("price")(v.replace(/\D/g,""))} ph="2500000" mono/></div>
+                <div style={{marginBottom:10}}><FL l="Gross Potential Rent ($)"/><Inp val={form.gpr} set={v=>f("gpr")(v.replace(/\D/g,""))} ph="240000" mono/></div>
+                <div style={{marginBottom:10}}><FL l="Annual NOI ($)"/><Inp val={form.noi} set={v=>f("noi")(v.replace(/\D/g,""))} ph="175000" mono/></div>
+                <div style={{marginBottom:10}}><FL l="Vacancy Rate (%)"/><Inp val={form.vacancy} set={f("vacancy")} ph="5" mono/></div>
+                <div style={{marginBottom:10}}><FL l="Rehab Budget ($)"/><Inp val={form.rehabBudget} set={v=>f("rehabBudget")(v.replace(/\D/g,""))} ph="0" mono/></div>
+                <div style={{marginBottom:10}}><FL l="Stabilized NOI ($)"/><Inp val={form.stabilizedNOI} set={v=>f("stabilizedNOI")(v.replace(/\D/g,""))} ph="195000" mono/></div>
+              </div>
+            </div>
+            <div style={P}>
+              <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.purple,letterSpacing:".1em",marginBottom:12}}>DEBT STRUCTURE</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <div style={{marginBottom:10}}><FL l="LTV (%)"/><Inp val={form.ltv} set={f("ltv")} ph="70" mono/></div>
+                <div style={{marginBottom:10}}><FL l="Interest Rate (%)"/><Inp val={form.rate} set={f("rate")} ph="6.75" mono/></div>
+                <div style={{marginBottom:10}}><FL l="Amortization (yrs)"/><Inp val={form.amort} set={f("amort")} ph="25" mono/></div>
+                <div style={{marginBottom:10}}><FL l="Interest-Only (yrs)"/><Inp val={form.ioYears} set={f("ioYears")} ph="0" mono/></div>
+              </div>
+              <div style={{marginBottom:10}}><FL l="Loan Purpose"/><Sel val={form.purpose} set={f("purpose")} opts={LOAN_PURPOSES}/></div>
+              {(form.purpose==="Refinance"||form.purpose==="Cash-Out Refinance")&&(
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+                  <div><FL l="Existing Balance ($)"/><Inp val={form.existingLoan} set={v=>f("existingLoan")(v.replace(/\D/g,""))} ph="1400000" mono/></div>
+                  <div><FL l="Existing Rate (%)"/><Inp val={form.existingRate} set={f("existingRate")} ph="4.25" mono/></div>
+                  <div><FL l="Maturity (mo)"/><Inp val={form.existingMaturity} set={f("existingMaturity")} ph="18" mono/></div>
+                </div>
+              )}
+            </div>
+            <div style={P}>
+              <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.rose,letterSpacing:".1em",marginBottom:8}}>MARKET</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <div><FL l="Market / MSA"/><Inp val={form.market} set={f("market")} ph="Anchorage, AK"/></div>
+                <div><FL l="Submarket"/><Inp val={form.submarket} set={f("submarket")} ph="South Anchorage"/></div>
+              </div>
+            </div>
+            {price>0&&noi>0&&(
+              <div style={{background:`${C.goldMuted}0A`,border:`1px solid ${C.borderGold}`,borderRadius:12,padding:"14px 16px"}}>
+                <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.gold,letterSpacing:".1em",marginBottom:12}}>LIVE METRICS</div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:12}}>
+                  {metrics.map((m,i)=>(<div key={i} style={{background:C.card,borderRadius:7,padding:"8px 10px"}}><div style={{fontSize:8,color:C.dim,marginBottom:3}}>{m.l}</div><div style={{fontFamily:"'DM Mono',monospace",fontSize:11,fontWeight:600,color:m.ok?C.success:C.warn}}>{m.v}</div></div>))}
+                </div>
+                <div style={{borderTop:`1px solid ${C.border}`,paddingTop:10}}>
+                  <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:8}}>SOURCES & USES</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                    <div>
+                      {[["Purchase Price",price],rehabBudget>0?["Rehab Budget",rehabBudget]:null,["Closing Costs",closingCosts]].filter(Boolean).map(([l,v])=>(
+                        <div key={l} style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontSize:10,color:C.dim}}>{l}</span><span style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:C.muted}}>${Math.round(v/1000)}K</span></div>
+                      ))}
+                      <div style={{display:"flex",justifyContent:"space-between",borderTop:`1px solid ${C.border}`,paddingTop:3,marginTop:3}}><span style={{fontSize:10,fontWeight:600,color:C.text}}>Total Uses</span><span style={{fontFamily:"'DM Mono',monospace",fontSize:10,fontWeight:600,color:C.white}}>${Math.round(totalUses/1000)}K</span></div>
+                    </div>
+                    <div>
+                      {[["Senior Debt",srcDebt],["Equity",srcEquity]].map(([l,v])=>(
+                        <div key={l} style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontSize:10,color:C.dim}}>{l}</span><span style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:C.muted}}>${Math.round(v/1000)}K</span></div>
+                      ))}
+                      <div style={{display:"flex",justifyContent:"space-between",borderTop:`1px solid ${C.border}`,paddingTop:3,marginTop:3}}><span style={{fontSize:10,fontWeight:600,color:C.text}}>Total Sources</span><span style={{fontFamily:"'DM Mono',monospace",fontSize:10,fontWeight:600,color:C.white}}>${Math.round(totalUses/1000)}K</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <button onClick={generate} disabled={loading||!canGenerate} style={{...btnGold,width:"100%",padding:"14px 0",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",gap:8,opacity:!canGenerate?0.5:1}}>
+              {loading?<><div style={{width:15,height:15,border:`2px solid ${C.bg}55`,borderTopColor:C.bg,borderRadius:"50%",animation:"spin 1s linear infinite"}}/>{loadingMsg||"Generating..."}</>:<><FileText size={15}/>Generate {DP_FORMATS.find(d=>d.id===fmt)?.label}</>}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* OUTPUT */}
+      {tab==="output"&&(
+        <div style={{display:"grid",gridTemplateColumns:"1fr 290px",gap:18,alignItems:"start"}}>
+          <div>
+            {loading&&(
+              <div style={{background:C.surface,border:`1px solid ${C.borderGold}`,borderRadius:14,padding:"60px 28px",textAlign:"center"}}>
+                <div style={{width:36,height:36,border:`2px solid ${C.borderGold}`,borderTopColor:C.goldBright,borderRadius:"50%",animation:"spin 1s linear infinite",margin:"0 auto 16px"}}/>
+                <p style={{color:C.muted,fontSize:14,marginBottom:4}}>{loadingMsg||"Generating package..."}</p>
+                <p style={{color:C.dim,fontSize:11}}>Building {DP_FORMATS.find(d=>d.id===fmt)?.label}</p>
+              </div>
+            )}
+            {output&&!loading&&(
+              <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:"28px 32px"}}>
+                <div style={{borderBottom:`2px solid ${C.borderGold}`,paddingBottom:18,marginBottom:24}}>
+                  <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.gold,letterSpacing:".2em",marginBottom:6}}>CONFIDENTIAL — CRE DEAL PACKAGE</div>
+                  <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:600,color:C.white,marginBottom:8}}>{form.propType}{form.address?` — ${form.address}`:""}
+                    {form.city?`, ${form.city}`:""}
+                    {form.state?`, ${form.state}`:""}
+                  </h1>
+                  <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+                    {[["Price",`$${Number(form.price).toLocaleString()}`],["Loan",`$${Math.round(loan/1000)}K (${form.ltv}% LTV)`],["NOI",`$${Number(form.noi).toLocaleString()}/yr`],["Cap",`${capRate.toFixed(2)}%`],["DSCR",`${dscr.toFixed(2)}x`]].filter(([,v])=>v&&!v.startsWith("$0")).map(([l,v])=>(
+                      <div key={l} style={{fontSize:11,color:C.muted}}>{l}: <strong style={{color:C.white}}>{v}</strong></div>
+                    ))}
+                  </div>
+                </div>
+                <div style={{fontSize:13,color:C.text,lineHeight:1.9}}>
+                  {output.split('\n').map((line,i)=>{
+                    if(line.startsWith('## '))return<h2 key={i} style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,color:C.gold,margin:"28px 0 10px",fontWeight:600,borderBottom:`1px solid ${C.border}`,paddingBottom:6}}>{line.replace('## ','')}</h2>;
+                    if(line.startsWith('### '))return<h3 key={i} style={{fontSize:14,fontWeight:600,color:C.white,margin:"16px 0 6px"}}>{line.replace('### ','')}</h3>;
+                    if(line.startsWith('- ')||line.startsWith('• '))return<div key={i} style={{paddingLeft:16,margin:"4px 0",display:"flex",gap:8}}><span style={{color:C.gold,flexShrink:0,marginTop:3}}>▸</span><span>{line.slice(2)}</span></div>;
+                    if(line==='')return<div key={i} style={{height:8}}/>;
+                    return<p key={i} style={{margin:"4px 0"}} dangerouslySetInnerHTML={{__html:line.replace(/\*\*(.*?)\*\*/g,'<strong style="color:#DDE2EE">$1</strong>')}}></p>;
+                  })}
+                </div>
+                <div style={{borderTop:`1px solid ${C.border}`,marginTop:28,paddingTop:16,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
+                  <p style={{fontSize:10,color:C.dim}}>Generated by HyCRE.ai · A Huit.AI Product · Confidential</p>
+                  <div style={{display:"flex",gap:8}}>
+                    <button onClick={copyMemo} style={{...btnOutline,padding:"6px 14px",fontSize:11,display:"flex",alignItems:"center",gap:5}}>{copied?<><CheckCircle size={10} color={C.success}/>Copied!</>:<><Copy size={10}/>Copy</>}</button>
+                    <button onClick={()=>window.print()} style={{...btnGold,padding:"6px 14px",fontSize:11,display:"flex",alignItems:"center",gap:5}}><Download size={10}/>Print PDF</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          {!loading&&output&&(
+            <div style={{display:"flex",flexDirection:"column",gap:14}}>
+              {apexData&&(
+                <div style={{background:`linear-gradient(135deg,${C.card},${C.card2})`,border:`1px solid ${C.borderGold}`,borderRadius:14,padding:18}}>
+                  <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:14}}><Award size={13} color={C.gold}/><span style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:C.gold,letterSpacing:".1em"}}>APEX DEAL SCORE</span></div>
+                  <div style={{display:"flex",alignItems:"baseline",gap:6,marginBottom:12}}>
+                    <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:52,fontWeight:700,color:gcol,lineHeight:1}}>{apexData.score}</span>
+                    <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,color:gcol}}>{apexData.grade}</span>
+                  </div>
+                  {apexData.factors.map((fac,i)=>(
+                    <div key={i} style={{marginBottom:8}}>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontSize:10,color:C.muted}}>{fac.name}</span><span style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:fac.grade==="A"?C.success:fac.grade==="B"?C.goldBright:fac.grade==="C"?C.warn:C.danger}}>{fac.grade} {fac.score}/{fac.max}</span></div>
+                      <div style={{height:3,background:C.border,borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",width:`${(fac.score/fac.max)*100}%`,background:fac.grade==="A"?C.success:fac.grade==="B"?C.gold:fac.grade==="C"?C.warn:C.danger,transition:"width .5s"}}/></div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {topLenders.length>0&&(
+                <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:16}}>
+                  <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:12}}>TOP LENDER MATCHES</div>
+                  {topLenders.map((l,i)=>(
+                    <div key={l.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,paddingBottom:8,borderBottom:i<topLenders.length-1?`1px solid ${C.border}`:"none"}}>
+                      <div style={{width:20,height:20,borderRadius:4,background:C.card,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,flexShrink:0}}>{l.logo}</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:11,fontWeight:500,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.name}</div>
+                        <div style={{fontSize:9,color:C.dim}}>{l.type} · {l.rateRange}</div>
+                      </div>
+                      <div style={{textAlign:"right",flexShrink:0}}>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,color:l.matchScore>=75?C.success:C.goldBright}}>{l.matchScore}</div>
+                        <div style={{fontSize:8,color:C.dim}}>match</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:16}}>
+                <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:12}}>SUBMISSION CHECKLIST</div>
+                {["✅ Executive memo (this package)","📄 Current rent roll","📊 T-12 operating statement","📋 2 years tax returns","🏦 Personal financial statement","📸 Property photos","🗺 Site plan / survey","📝 Purchase & sale agreement",form.purpose!=="Acquisition"?"📃 Existing loan documents":"","💼 Sponsor track record","📈 Appraisal / engagement letter","🔍 Phase I ESA"].filter(Boolean).map((item,i)=>(
+                  <div key={i} style={{fontSize:11,color:C.muted,marginBottom:5}}>{item}</div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
