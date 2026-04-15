@@ -159,11 +159,28 @@ function matchLenders({propType,loanAmt,ltv,dscr}) {
 }
 
 /* ─── APP ROOT ─── */
+/* ─── AUTH HELPERS ─── */
+function saveSession(token, user) {
+  try { localStorage.setItem("hycre_token", token); localStorage.setItem("hycre_user", JSON.stringify(user)); } catch {}
+}
+function clearSession() {
+  try { localStorage.removeItem("hycre_token"); localStorage.removeItem("hycre_user"); } catch {}
+}
+function loadSession() {
+  try {
+    const token = localStorage.getItem("hycre_token");
+    const user = JSON.parse(localStorage.getItem("hycre_user") || "null");
+    return { token, user };
+  } catch { return { token: null, user: null }; }
+}
+
 export default function App() {
   const [view, setView] = useState("landing");
   const [selectedTier, setSelectedTier] = useState(null);
   const [user, setUser] = useState(null);
   const [scrolled, setScrolled] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [resetMode, setResetMode] = useState(false);
 
   useEffect(() => {
     const s = document.createElement("style");
@@ -171,16 +188,69 @@ export default function App() {
     document.head.appendChild(s);
     const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", onScroll);
+
+    // Check for password reset token in URL
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("mode") === "reset" || params.get("reset")) {
+      setResetMode(true);
+      setView("login");
+      setAuthLoading(false);
+      return () => { document.head.removeChild(s); window.removeEventListener("scroll", onScroll); };
+    }
+
+    // Restore session on load
+    const { token, user: savedUser } = loadSession();
+    if (token && savedUser) {
+      fetch("/api/auth/me", { headers: { "Authorization": `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && data.user) {
+            setUser({ ...data.user, token });
+            setView("dashboard");
+          } else { clearSession(); }
+        })
+        .catch(() => clearSession())
+        .finally(() => setAuthLoading(false));
+    } else {
+      setAuthLoading(false);
+    }
+
     return () => { document.head.removeChild(s); window.removeEventListener("scroll", onScroll); };
   }, []);
 
   const go = (v) => { setView(v); window.scrollTo(0,0); };
   const openCheckout = (tid) => { setSelectedTier(tid); go("checkout"); };
   const openDash = (u) => { setUser(u); go("dashboard"); };
+  const logout = () => { clearSession(); setUser(null); go("landing"); };
+
+  // Auth loading splash
+  if (authLoading) return (
+    <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{textAlign:"center"}}>
+        <Logo/>
+        <div style={{width:24,height:24,border:`2px solid ${C.borderGold}`,borderTopColor:C.goldBright,borderRadius:"50%",animation:"spin 1s linear infinite",margin:"20px auto 0"}}/>
+      </div>
+    </div>
+  );
 
   if (view === "checkout") return <Checkout tier={TIERS[selectedTier]} onBack={()=>go("landing")} onSuccess={openDash} />;
-  if (view === "login") return <Login onBack={()=>go("landing")} onSuccess={openDash} />;
-  if (view === "dashboard") return <Dashboard user={user} onLogout={()=>go("landing")} />;
+  if (view === "login") return <Login onBack={()=>go("landing")} onSuccess={openDash} resetMode={resetMode} />;
+  if (view === "dashboard") return <Dashboard user={user} setUser={setUser} onLogout={logout} />;
+
+  // Payment pending gate — logged in but not yet payment verified
+  if (user && !user.payment_verified) return (
+    <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+      <div style={{background:C.surface,border:`1px solid ${C.borderGold}`,borderRadius:20,padding:48,maxWidth:440,width:"100%",textAlign:"center"}}>
+        <div style={{width:56,height:56,background:`${C.goldMuted}22`,border:`1px solid ${C.borderGold}`,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px"}}><Lock size={22} color={C.gold}/></div>
+        <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,color:C.white,marginBottom:10}}>Complete Your Setup</h2>
+        <p style={{color:C.muted,marginBottom:32,fontSize:14,lineHeight:1.7}}>Your account is created. Choose a plan to unlock your dashboard.</p>
+        {Object.values(TIERS).map(t=>(
+          <button key={t.id} onClick={()=>openCheckout(t.id)} style={{width:"100%",padding:"12px 0",borderRadius:8,border:`1px solid ${t.id==="active"?"transparent":C.borderGold}`,background:t.id==="active"?`linear-gradient(90deg,${C.gold},${C.goldBright})`:"transparent",color:t.id==="active"?C.bg:C.gold,fontWeight:600,fontSize:14,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",marginBottom:10}}>{t.cta} — {t.price}{t.period}</button>
+        ))}
+        <button onClick={logout} style={{background:"none",border:"none",color:C.dim,cursor:"pointer",fontSize:12,marginTop:8,fontFamily:"'DM Sans',sans-serif"}}>Sign out</button>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{minHeight:"100vh",background:C.bg,overflowX:"hidden"}}>
@@ -417,19 +487,22 @@ function Section({t,children}){return<div style={{marginBottom:18}}><p style={{c
 /* ─── CHECKOUT ─── */
 function Checkout({tier,onBack,onSuccess}) {
   const [step,setStep]=useState(1);
-  const [form,setForm]=useState({name:"",email:"",card:"",exp:"",cvv:""});
+  const [form,setForm]=useState({name:"",email:"",password:"",card:"",exp:"",cvv:""});
   const [tosAccepted,setTosAccepted]=useState(false);
   const [showCvv,setShowCvv]=useState(false);
+  const [showPw,setShowPw]=useState(false);
   const [loading,setLoading]=useState(false);
   const [errors,setErrors]=useState({});
   const [legalModal,setLegalModal]=useState(null);
   const [payError,setPayError]=useState("");
+  const [createdUser,setCreatedUser]=useState(null);
   const f=k=>v=>setForm(p=>({...p,[k]:v}));
 
   const validate=()=>{
     const e={};
     if(!form.name.trim())e.name="Required";
     if(!form.email.includes("@"))e.email="Valid email required";
+    if(step===1&&(form.password.length<8))e.password="At least 8 characters required";
     if(step===1&&!tosAccepted)e.tos="You must accept the Terms of Service and Privacy Policy to continue";
     if(step===2){if(form.card.replace(/\s/g,"").length<16)e.card="Valid card required";if(!form.exp.match(/^\d{2}\/\d{2}$/))e.exp="MM/YY";if(form.cvv.length<3)e.cvv="3-4 digits";}
     setErrors(e);return Object.keys(e).length===0;
@@ -440,16 +513,45 @@ function Checkout({tier,onBack,onSuccess}) {
     if(step===1){setStep(2);return;}
     setLoading(true);setPayError("");
     try {
-      // Process payment via ZenoPay
-      const res = await fetch("/api/payment", {
+      // Step 1: Create Supabase account
+      const signupRes = await fetch("/api/auth/signup",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({email:form.email,name:form.name,password:form.password||form.email.split("@")[0]+"Hycre24!",tier:tier.id,tosAccepted:true})
+      });
+      const signupData = await signupRes.json();
+      if(!signupRes.ok && signupData.error !== "An account with this email already exists."){
+        setPayError(signupData.error||"Account creation failed.");setLoading(false);return;
+      }
+
+      // Step 2: Process payment
+      const payRes = await fetch("/api/payment",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({tier:tier.id,name:form.name,email:form.email,amount:tier.price,period:tier.period,card:form.card,exp:form.exp,cvv:form.cvv})
       });
-      const data = await res.json();
-      if(!res.ok||!data.success){setPayError(data.error||"Payment failed. Please check your card details.");setLoading(false);return;}
-      // Notify admin of new signup
-      await fetch("/api/notify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"new_signup",name:form.name,email:form.email,tier:tier.id,amount:`${tier.price}${tier.period}`})});
+      const payData = await payRes.json();
+      if(!payRes.ok||!payData.success){setPayError(payData.error||"Payment failed. Please check your card details.");setLoading(false);return;}
+
+      // Step 3: Update user to payment_verified in Supabase
+      if(signupData.user?.id){
+        await fetch(`https://vvkdnzqgtajeouxlliuk.supabase.co/auth/v1/admin/users/${signupData.user.id}`,{
+          method:"PUT",
+          headers:{"apikey":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2a2RuenFndGFqZW91eGxsaXVrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTAwOTE4NiwiZXhwIjoyMDg2NTg1MTg2fQ.Q61WGhT0KHUbrVc3FiRzQN-vhmy53dEqaad4w4c_Z9o","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2a2RuenFndGFqZW91eGxsaXVrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTAwOTE4NiwiZXhwIjoyMDg2NTg1MTg2fQ.Q61WGhT0KHUbrVc3FiRzQN-vhmy53dEqaad4w4c_Z9o","Content-Type":"application/json"},
+          body:JSON.stringify({user_metadata:{name:form.name,tier:tier.id,plan_status:"active",payment_verified:true,payment_verified_at:new Date().toISOString(),transaction_id:payData.transaction_id}})
+        });
+      }
+
+      // Step 4: Save session
+      if(signupData.access_token){
+        const userData={...signupData.user,token:signupData.access_token,payment_verified:true,plan_status:"active"};
+        saveSession(signupData.access_token,userData);
+        setCreatedUser(userData);
+      }
+
+      // Step 5: Notify admin
+      fetch("/api/notify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"new_signup",name:form.name,email:form.email,tier:tier.id,amount:`${tier.price}${tier.period}`})});
+
       setStep(3);
     } catch(err){
       setPayError("Connection error. Please try again.");
@@ -469,7 +571,7 @@ function Checkout({tier,onBack,onSuccess}) {
           <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:12,color:C.muted}}>Plan</span><span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:C.gold}}>{tier.name}</span></div>
           <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:12,color:C.muted}}>Amount</span><span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,color:C.goldBright,fontWeight:600}}>{tier.price}{tier.period}</span></div>
         </div>
-        <button onClick={()=>onSuccess({name:form.name,email:form.email,tier:tier.id})} style={{...btnGold,width:"100%",padding:"13px 0",fontSize:15}}>Enter Dashboard →</button>
+        <button onClick={()=>onSuccess(createdUser||{name:form.name,email:form.email,tier:tier.id,payment_verified:true})} style={{...btnGold,width:"100%",padding:"13px 0",fontSize:15}}>Enter Dashboard →</button>
       </div>
     </div>
   );
@@ -494,6 +596,7 @@ function Checkout({tier,onBack,onSuccess}) {
               <h3 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:24,color:C.white,marginBottom:22}}>Create Your Account</h3>
               <FI label="Full Name" val={form.name} set={f("name")} ph="Your Name" err={errors.name}/>
               <FI label="Email Address" val={form.email} set={f("email")} ph="you@example.com" err={errors.email}/>
+              <FI label="Password" val={form.password} set={f("password")} ph="Min 8 characters" type={showPw?"text":"password"} err={errors.password} suffix={<button type="button" onClick={()=>setShowPw(s=>!s)} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:0}}>{showPw?<EyeOff size={13}/>:<Eye size={13}/>}</button>}/>
               {/* TOS Acceptance */}
               <div style={{marginTop:20,padding:16,background:C.card,borderRadius:10,border:`1px solid ${errors.tos?C.danger:tosAccepted?C.successBorder:C.border}`,transition:"border-color .2s"}}>
                 <div style={{display:"flex",alignItems:"flex-start",gap:12,cursor:"pointer"}} onClick={()=>setTosAccepted(s=>!s)}>
@@ -551,25 +654,39 @@ function Checkout({tier,onBack,onSuccess}) {
 }
 
 /* ─── LOGIN ─── */
-function Login({onBack,onSuccess}) {
+function Login({onBack,onSuccess,resetMode}) {
   const [form,setForm]=useState({email:"",password:""});
   const [showPw,setShowPw]=useState(false);
   const [loading,setLoading]=useState(false);
-  const [mode,setMode]=useState("login"); // login | reset
+  const [error,setError]=useState("");
+  const [mode,setMode]=useState(resetMode?"reset":"login");
   const [resetSent,setResetSent]=useState(false);
   const [resetEmail,setResetEmail]=useState("");
   const [legalModal,setLegalModal]=useState(null);
 
-  const handle=()=>{
+  const handle=async()=>{
     if(!form.email||!form.password)return;
-    setLoading(true);
-    setTimeout(()=>{setLoading(false);onSuccess({name:"User",email:form.email,tier:"active"});},1400);
+    setLoading(true);setError("");
+    try {
+      const res = await fetch("/api/auth/signin",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({email:form.email,password:form.password})
+      });
+      const data = await res.json();
+      if(!res.ok||!data.success){setError(data.error||"Invalid email or password.");setLoading(false);return;}
+      saveSession(data.access_token,data.user);
+      onSuccess({...data.user,token:data.access_token});
+    } catch(err){
+      setError("Connection error. Please try again.");
+    }
+    setLoading(false);
   };
 
   const sendReset=async()=>{
     if(!resetEmail.includes("@"))return;
     setLoading(true);
-    await fetch("/api/reset-password",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:resetEmail})});
+    await fetch("/api/auth/reset-password",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"request",email:resetEmail})});
     setLoading(false);setResetSent(true);
   };
 
@@ -613,7 +730,10 @@ function Login({onBack,onSuccess}) {
               <div style={{textAlign:"right",marginBottom:16,marginTop:-6}}>
                 <span onClick={()=>setMode("reset")} style={{fontSize:11,color:C.gold,cursor:"pointer"}}>Forgot password?</span>
               </div>
-              <button onClick={handle} disabled={loading} style={{...btnGold,width:"100%",padding:"12px 0",fontSize:14}}>{loading?"Signing In...":"Sign In"}</button>
+              {error&&<div style={{marginBottom:14,padding:"10px 14px",background:C.dangerBg,border:`1px solid ${C.dangerBorder}`,borderRadius:8,fontSize:12,color:C.danger}}>{error}</div>}
+              <button onClick={handle} disabled={loading||!form.email||!form.password} style={{...btnGold,width:"100%",padding:"12px 0",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",gap:8,opacity:loading?.7:1}}>
+                {loading?<><div style={{width:13,height:13,border:`2px solid ${C.bg}55`,borderTopColor:C.bg,borderRadius:"50%",animation:"spin 1s linear infinite"}}/>Signing In...</>:"Sign In"}
+              </button>
               <div style={{marginTop:20,padding:"12px 14px",background:C.card,borderRadius:8,border:`1px solid ${C.border}`}}>
                 <p style={{fontSize:11,color:C.muted,textAlign:"center",lineHeight:1.6}}>
                   By signing in you agree to our{" "}
@@ -642,10 +762,10 @@ const DASH_NAV = [
   {id:"underwriting",icon:BarChart3,label:"Underwriting Suite"},
   {id:"lenders",icon:Database,label:"Lender Engine"},
   {id:"apex",icon:Award,label:"APEX Scoring"},
-  {id:"course",icon:BookOpen,label:"MasterClass Modules"},
+  {id:"settings",icon:Shield,label:"Account & Billing"},
 ];
 
-function Dashboard({user,onLogout}) {
+function Dashboard({user,setUser,onLogout}) {
   const [active,setActive]=useState("home");
   const [sidebarOpen,setSidebarOpen]=useState(true);
   const isPro=user?.tier==="active"||user?.tier==="agency";
@@ -658,10 +778,12 @@ function Dashboard({user,onLogout}) {
           <button onClick={()=>setSidebarOpen(s=>!s)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",padding:4}}><Menu size={14}/></button>
         </div>
         <nav style={{flex:1,padding:"10px 8px",overflowY:"auto"}}>
-          {sidebarOpen&&<div style={{fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:".12em",color:C.blue,padding:"8px 8px 4px",textTransform:"uppercase"}}>Phase 3 — Live</div>}
+          {sidebarOpen&&<div style={{fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:".12em",color:C.blue,padding:"8px 8px 4px",textTransform:"uppercase"}}>Platform</div>}
           {DASH_NAV.slice(0,5).map(n=><SideBtn key={n.id} n={n} active={active===n.id} open={sidebarOpen} onClick={()=>setActive(n.id)}/>)}
           {sidebarOpen&&<div style={{fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:".12em",color:C.muted,padding:"10px 8px 4px",textTransform:"uppercase"}}>Tools</div>}
-          {DASH_NAV.slice(5).map(n=><SideBtn key={n.id} n={n} active={active===n.id} open={sidebarOpen} onClick={()=>setActive(n.id)}/>)}
+          {DASH_NAV.slice(5,9).map(n=><SideBtn key={n.id} n={n} active={active===n.id} open={sidebarOpen} onClick={()=>setActive(n.id)}/>)}
+          {sidebarOpen&&<div style={{fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:".12em",color:C.muted,padding:"10px 8px 4px",textTransform:"uppercase"}}>Account</div>}
+          {DASH_NAV.slice(9).map(n=><SideBtn key={n.id} n={n} active={active===n.id} open={sidebarOpen} onClick={()=>setActive(n.id)}/>)}
         </nav>
         {sidebarOpen&&(
           <div style={{padding:"12px 14px",borderTop:`1px solid ${C.border}`}}>
@@ -691,6 +813,7 @@ function Dashboard({user,onLogout}) {
           {active==="underwriting"&&<UnderwritingHub/>}
           {active==="lenders"&&<LenderEngine/>}
           {active==="apex"&&<APEXScore/>}
+          {active==="settings"&&<AccountSettings user={user} setUser={setUser} onLogout={onLogout}/>}
         </main>
       </div>
     </div>
@@ -1401,6 +1524,151 @@ function APEXScore() {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── ACCOUNT SETTINGS ─── */
+function AccountSettings({user,setUser,onLogout}) {
+  const [loading,setLoading]=useState(false);
+  const [cancelConfirm,setCancelConfirm]=useState(false);
+  const [msg,setMsg]=useState({type:"",text:""});
+  const [subData,setSubData]=useState(null);
+  const [pwForm,setPwForm]=useState({current:"",next:"",confirm:""});
+  const [pwLoading,setPwLoading]=useState(false);
+  const [pwMsg,setPwMsg]=useState("");
+
+  useEffect(()=>{
+    // Load subscription data
+    if(user?.token){
+      fetch("/api/subscription",{headers:{"Authorization":`Bearer ${user.token}`}})
+        .then(r=>r.json())
+        .then(d=>{if(d.subscription)setSubData(d.subscription);})
+        .catch(()=>{});
+    }
+  },[user?.token]);
+
+  const cancelSub=async()=>{
+    setLoading(true);setMsg({type:"",text:""});
+    try{
+      const res=await fetch("/api/subscription",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${user.token}`},body:JSON.stringify({action:"cancel"})});
+      const data=await res.json();
+      if(data.success){
+        setMsg({type:"success",text:"Subscription cancelled. You have access until end of billing period."});
+        setCancelConfirm(false);
+        setSubData(s=>({...s,cancel_at_period_end:true}));
+      } else {
+        setMsg({type:"error",text:data.error||"Cancellation failed."});
+      }
+    }catch{setMsg({type:"error",text:"Connection error."});}
+    setLoading(false);
+  };
+
+  const reactivateSub=async()=>{
+    setLoading(true);
+    try{
+      const res=await fetch("/api/subscription",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${user.token}`},body:JSON.stringify({action:"reactivate"})});
+      const data=await res.json();
+      if(data.success){
+        setMsg({type:"success",text:"Subscription reactivated successfully."});
+        setSubData(s=>({...s,cancel_at_period_end:false}));
+      }
+    }catch{}
+    setLoading(false);
+  };
+
+  const openPortal=async()=>{
+    setLoading(true);
+    try{
+      const res=await fetch("/api/subscription",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${user.token}`},body:JSON.stringify({action:"portal"})});
+      const data=await res.json();
+      if(data.url)window.open(data.url,"_blank");
+      else setMsg({type:"error",text:data.error||"Could not open billing portal."});
+    }catch{}
+    setLoading(false);
+  };
+
+  const changePassword=async()=>{
+    if(pwForm.next.length<8){setPwMsg("Password must be at least 8 characters.");return;}
+    if(pwForm.next!==pwForm.confirm){setPwMsg("Passwords do not match.");return;}
+    setPwLoading(true);setPwMsg("");
+    try{
+      const res=await fetch("/api/auth/reset-password",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"confirm",token:user.token,newPassword:pwForm.next})});
+      const data=await res.json();
+      if(data.success){setPwMsg("✓ Password updated successfully.");setPwForm({current:"",next:"",confirm:""});}
+      else setPwMsg(data.error||"Password update failed.");
+    }catch{setPwMsg("Connection error.");}
+    setPwLoading(false);
+  };
+
+  const tier=TIERS[user?.tier];
+  const accessUntil=subData?.current_period_end?new Date(subData.current_period_end*1000).toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"}):null;
+
+  return(
+    <div className="au" style={{maxWidth:700}}>
+      <h2 style={H2}>Account & Billing</h2>
+      <p style={{...Sub,marginBottom:28}}>Manage your plan, billing, and account settings.</p>
+
+      {/* Plan Overview */}
+      <div style={{background:C.surface,border:`1px solid ${C.borderGold}`,borderRadius:14,padding:24,marginBottom:20}}>
+        <SL>Current Plan</SL>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:14}}>
+          <div>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,color:C.white,fontWeight:600}}>{tier?.name||"ACTIVE"}</div>
+            <div style={{fontSize:13,color:C.muted,marginTop:4}}>{tier?.price}{tier?.period} · {user?.email}</div>
+            {subData?.cancel_at_period_end&&<div style={{fontSize:12,color:C.warn,marginTop:6}}>⚠ Cancels at end of period{accessUntil?` — access until ${accessUntil}`:""}</div>}
+            {!subData?.cancel_at_period_end&&accessUntil&&<div style={{fontSize:12,color:C.muted,marginTop:6}}>Next billing: {accessUntil}</div>}
+          </div>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+            <button onClick={openPortal} disabled={loading} style={{...btnOutline,padding:"8px 18px",fontSize:13}}>Manage Billing</button>
+            {subData?.cancel_at_period_end
+              ?<button onClick={reactivateSub} disabled={loading} style={{...btnGold,padding:"8px 18px",fontSize:13}}>Reactivate</button>
+              :user?.tier!=="foundation"&&<button onClick={()=>setCancelConfirm(true)} disabled={loading} style={{background:"transparent",border:`1px solid ${C.dangerBorder}`,color:C.danger,borderRadius:8,padding:"8px 18px",fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Cancel Plan</button>
+            }
+          </div>
+        </div>
+
+        {/* Cancel Confirmation */}
+        {cancelConfirm&&<div style={{marginTop:18,padding:16,background:C.dangerBg,border:`1px solid ${C.dangerBorder}`,borderRadius:10}}>
+          <p style={{fontSize:13,color:C.danger,marginBottom:12}}>Are you sure? You'll lose access to all paid features at the end of your billing period.</p>
+          <div style={{display:"flex",gap:10}}>
+            <button onClick={cancelSub} disabled={loading} style={{background:C.danger,border:"none",color:"#fff",borderRadius:7,padding:"8px 18px",fontSize:12,cursor:"pointer",fontWeight:600,fontFamily:"'DM Sans',sans-serif"}}>{loading?"Cancelling...":"Yes, Cancel Plan"}</button>
+            <button onClick={()=>setCancelConfirm(false)} style={{...btnOutline,padding:"8px 14px",fontSize:12}}>Keep Plan</button>
+          </div>
+        </div>}
+
+        {msg.text&&<div style={{marginTop:14,padding:"10px 14px",background:msg.type==="success"?C.successBg:C.dangerBg,border:`1px solid ${msg.type==="success"?C.successBorder:C.dangerBorder}`,borderRadius:8,fontSize:13,color:msg.type==="success"?C.success:C.danger}}>{msg.text}</div>}
+      </div>
+
+      {/* Plan Features */}
+      <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:24,marginBottom:20}}>
+        <SL>Plan Features</SL>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          {tier?.features?.map((f,i)=><div key={i} style={{display:"flex",gap:8,alignItems:"flex-start"}}><Check size={12} color={C.success} style={{marginTop:3,flexShrink:0}}/><span style={{fontSize:13,color:C.text}}>{f}</span></div>)}
+        </div>
+      </div>
+
+      {/* Change Password */}
+      <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:24,marginBottom:20}}>
+        <SL>Change Password</SL>
+        <div style={{maxWidth:400}}>
+          <div style={{marginBottom:12}}><FL l="New Password"/><input value={pwForm.next} onChange={e=>setPwForm(p=>({...p,next:e.target.value}))} type="password" placeholder="Min 8 characters" style={IS}/></div>
+          <div style={{marginBottom:16}}><FL l="Confirm New Password"/><input value={pwForm.confirm} onChange={e=>setPwForm(p=>({...p,confirm:e.target.value}))} type="password" placeholder="Re-enter new password" style={IS}/></div>
+          {pwMsg&&<p style={{fontSize:12,color:pwMsg.startsWith("✓")?C.success:C.danger,marginBottom:10}}>{pwMsg}</p>}
+          <button onClick={changePassword} disabled={pwLoading||!pwForm.next||!pwForm.confirm} style={{...btnGold,padding:"9px 22px",fontSize:13}}>
+            {pwLoading?"Updating...":"Update Password"}
+          </button>
+        </div>
+      </div>
+
+      {/* Danger Zone */}
+      <div style={{background:C.surface,border:`1px solid ${C.dangerBorder}`,borderRadius:14,padding:24}}>
+        <SL>Account</SL>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
+          <div><p style={{fontSize:13,color:C.text,marginBottom:3}}>Sign out of HyCRE.ai</p><p style={{fontSize:11,color:C.muted}}>You'll need to sign back in to access your dashboard.</p></div>
+          <button onClick={onLogout} style={{display:"flex",alignItems:"center",gap:8,background:"transparent",border:`1px solid ${C.border}`,color:C.muted,borderRadius:8,padding:"8px 16px",fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}><LogOut size={13}/>Sign Out</button>
         </div>
       </div>
     </div>
