@@ -162,12 +162,100 @@ const CRE_NEWS = [
 ];
 
 const MODULES = [
-  {id:1,title:"CRE Foundations",subtitle:"The language, structure, and logic of commercial real estate",icon:"🏛",duration:"45 min",topics:["Property types & asset classes","How CRE deals are structured","Key market participants","CRE vs residential","Reading a deal from the outside in"],color:C.blue},
-  {id:2,title:"Packaging a Deal",subtitle:"Build a lender-ready package that gets funded",icon:"📋",duration:"55 min",topics:["Executive memo structure","Financial summary formatting","What lenders look for first","Supporting document checklist","Common packaging mistakes"],color:C.gold},
-  {id:3,title:"Lender Relationships",subtitle:"Who to call, how to pitch, and how to get funded",icon:"🤝",duration:"50 min",topics:["Lender appetite by type","How to cold approach a lender","Term sheet negotiation basics","Building a lender database"],color:C.teal},
-  {id:4,title:"CRE Underwriting",subtitle:"Analyze any deal with confidence and precision",icon:"📊",duration:"65 min",topics:["NOI calculation walkthrough","Cap rate interpretation by market","DSCR: the lender's #1 metric","LTV vs LTC vs LTARV","Red flags in a deal package"],color:C.purple},
-  {id:5,title:"Client Acquisition",subtitle:"Build deal flow from nothing using proven systems",icon:"🎯",duration:"60 min",topics:["Where CRE capital finders make money","HMDA data prospecting strategy","LinkedIn outbound for CRE","Converting a cold lead to a funded deal"],color:C.rose},
+  {
+    id:1, title:"CRE Foundations", subtitle:"The language, structure, and logic of commercial real estate",
+    icon:"🏛", duration:"50 min", color:C.blue,
+    topics:["Property types & asset classes","How CRE deals are structured","Key market participants","CRE vs residential investing","NOI, cap rate, and valuation basics","Reading a deal from the outside in"],
+    formulas:[
+      {name:"Net Operating Income",formula:"NOI = Gross Income − Vacancy − Operating Expenses",example:"$180,000 − $9,000 − $45,000 = $126,000 NOI"},
+      {name:"Cap Rate",formula:"Cap Rate = NOI ÷ Property Value",example:"$126,000 ÷ $1,800,000 = 7.0% cap rate"},
+      {name:"Property Value (Income Approach)",formula:"Value = NOI ÷ Cap Rate",example:"$126,000 ÷ 0.065 = $1,938,461"},
+    ]
+  },
+  {
+    id:2, title:"CRE Underwriting Deep Dive", subtitle:"Analyze any deal with speed, accuracy, and confidence",
+    icon:"📊", duration:"70 min", color:C.purple,
+    topics:["DSCR: the lender's #1 metric explained","LTV vs LTC vs LTARV — when each matters","Cash-on-cash return vs equity multiple","Stress testing a deal","Underwriting multifamily vs commercial","Red flags that kill deals in committee"],
+    formulas:[
+      {name:"Debt Service Coverage Ratio",formula:"DSCR = NOI ÷ Annual Debt Service",example:"$126,000 ÷ $96,000 = 1.31x DSCR"},
+      {name:"Loan-to-Value",formula:"LTV = Loan Amount ÷ Appraised Value",example:"$1,260,000 ÷ $1,800,000 = 70% LTV"},
+      {name:"Cash-on-Cash Return",formula:"CoC = Annual Cash Flow ÷ Total Cash Invested",example:"$30,000 ÷ $540,000 = 5.6% CoC"},
+    ]
+  },
+  {
+    id:3, title:"Lender Types & Capital Stack", subtitle:"Know who has money, what they want, and why it matters",
+    icon:"🏦", duration:"60 min", color:C.gold,
+    topics:["Agency vs life company vs debt fund vs bank","Senior debt, mezzanine, preferred equity, JV equity","How lenders price risk","What the capital stack looks like on a real deal","Recourse vs non-recourse — what you need to know","Bridge loans: when and why"],
+    formulas:[
+      {name:"Blended Cost of Capital",formula:"Weighted Avg Rate = (Sr Debt % × Sr Rate) + (Mezz % × Mezz Rate)",example:"(70% × 6.5%) + (15% × 11%) = 4.55% + 1.65% = 6.20%"},
+      {name:"Debt Yield",formula:"Debt Yield = NOI ÷ Loan Amount",example:"$126,000 ÷ $1,260,000 = 10.0% debt yield"},
+    ]
+  },
+  {
+    id:4, title:"Deal Packaging Mastery", subtitle:"Build a lender-ready package that actually gets funded",
+    icon:"📋", duration:"65 min", color:C.teal,
+    topics:["The 7-section executive memo structure","Financial summary formatting lenders respond to","What kills a deal in the first 60 seconds","Rent rolls, T-12s, and operating statements","Supporting document checklist","Common packaging mistakes that cost you deals"],
+    formulas:[
+      {name:"Effective Gross Income",formula:"EGI = Gross Potential Rent − Vacancy − Credit Loss + Other Income",example:"$240,000 − $12,000 − $2,400 + $6,000 = $231,600"},
+      {name:"Operating Expense Ratio",formula:"OER = Total Operating Expenses ÷ EGI",example:"$105,000 ÷ $231,600 = 45.3% OER"},
+    ]
+  },
+  {
+    id:5, title:"The CRE Sales Process", subtitle:"From cold contact to signed term sheet — the full cycle",
+    icon:"🎯", duration:"65 min", color:C.rose,
+    topics:["How capital finders actually make money","Building your prospect pipeline","The perfect CRE cold call script","Email sequences that get responses","Following up without being annoying","Closing the engagement agreement"],
+    formulas:[
+      {name:"Capital Finder Fee",formula:"Finder Fee = Loan Amount × Fee %",example:"$5,000,000 × 1.0% = $50,000 fee"},
+      {name:"Pipeline Value",formula:"Pipeline Value = Avg Deal Size × Active Deals × Close Rate",example:"$4M × 8 × 35% = $11.2M funded pipeline"},
+    ]
+  },
+  {
+    id:6, title:"HMDA Data Prospecting", subtitle:"Turn public mortgage data into a funded deal machine",
+    icon:"🔍", duration:"60 min", color:C.blue,
+    topics:["What HMDA data is and why it's gold","How to read and filter HMDA records","Identifying refinance and acquisition targets","Building outreach sequences from HMDA","Multi-touch sequences that convert","Compliance: what you can and cannot do"],
+    formulas:[
+      {name:"Refi Opportunity Score",formula:"Score = (Current Rate − Market Rate) × LTV Quality × Time Since Origination",example:"Loan at 7.5% from 2022 at 65% LTV = high refi candidate"},
+      {name:"Outreach Conversion",formula:"Deals Funded = Leads × Contact Rate × Conversion Rate",example:"500 leads × 12% contact × 8% close = 4.8 funded deals"},
+    ]
+  },
+  {
+    id:7, title:"Multifamily Deep Dive", subtitle:"The most lender-active asset class — master it completely",
+    icon:"🏘", duration:"70 min", color:C.purple,
+    topics:["Why multifamily dominates CRE lending","Agency (Fannie/Freddie) loan programs explained","How to underwrite a 12-unit vs 100-unit deal","Value-add multifamily: the full playbook","Market rent vs in-place rent — the gap is your pitch","Stabilization timelines and bridge-to-perm execution"],
+    formulas:[
+      {name:"Rent Premium Potential",formula:"Value Upside = (Market Rent − In-Place Rent) × Units × 12 ÷ Cap Rate",example:"($200 × 24 units × 12) ÷ 0.065 = $887,692 upside"},
+      {name:"Gross Rent Multiplier",formula:"GRM = Purchase Price ÷ Annual Gross Rent",example:"$2,100,000 ÷ $252,000 = 8.3x GRM"},
+    ]
+  },
+  {
+    id:8, title:"Commercial Deal Types", subtitle:"Office, retail, industrial, hotel, self-storage — the full map",
+    icon:"🏢", duration:"65 min", color:C.gold,
+    topics:["Office: class A vs B vs C and what lenders think","Retail: NNN, strip, power center — lender appetite by type","Industrial: the darling asset class and why","Self-storage: underwriting and cap rate benchmarks","Hotel: the hardest asset to finance and how","Mixed-use: complexity and opportunity"],
+    formulas:[
+      {name:"NNN Lease Value",formula:"Value = Annual Base Rent ÷ Cap Rate (NNN basis)",example:"$120,000 NNN ÷ 0.055 = $2,181,818 value"},
+      {name:"Hotel RevPAR",formula:"RevPAR = Occupancy Rate × Average Daily Rate",example:"72% × $149 = $107.28 RevPAR"},
+    ]
+  },
+  {
+    id:9, title:"Term Sheet Negotiation", subtitle:"Read every line, push the right levers, protect your client",
+    icon:"📝", duration:"55 min", color:C.teal,
+    topics:["Anatomy of a CRE term sheet","Rate, spread, index — what's actually negotiable","Prepayment: defeasance vs step-down vs yield maintenance","Recourse carve-outs and when to push back","Reserves: operating, replacement, capex","Good faith deposits and what happens if you walk"],
+    formulas:[
+      {name:"Defeasance Cost Estimate",formula:"Cost ≈ Loan Balance × (Current Rate − Treasury Rate) × Remaining Term",example:"$2M × (6.5% − 4.2%) × 4yrs ≈ $184,000 defeasance"},
+      {name:"Step-Down Prepayment",formula:"Fee = Loan Balance × Step %",example:"Year 3 of 5-4-3-2-1: $2M × 3% = $60,000"},
+    ]
+  },
+  {
+    id:10, title:"Building Your CRE Capital Practice", subtitle:"Systems, scale, and income — building a real business",
+    icon:"🚀", duration:"75 min", color:C.rose,
+    topics:["The CRE capital finder business model — 6-figure roadmap","CRM and pipeline management","Building lender relationships that last","Referral networks: attorneys, CPAs, brokers","When to bring in equity partners","Getting licensed vs staying as a finder"],
+    formulas:[
+      {name:"Annual Revenue Model",formula:"Revenue = Avg Fee × Deals Closed Per Year",example:"$42,000 avg fee × 6 deals = $252,000/yr"},
+      {name:"Deal Velocity",formula:"Deals/Year = (Monthly Outreach × Contact Rate × Close Rate) × 12",example:"(80 × 15% × 10%) × 12 = 14.4 deals/year potential"},
+    ]
+  },
 ];
+
 
 function calcAPEXScore({capRate,dscr,ltv,propType,purpose}) {
   let score=0; const factors=[];
@@ -989,6 +1077,7 @@ function HuitBrain() {
 /* ─── MASTERCLASS ─── */
 function MasterClass() {
   const [activeMod,setActiveMod]=useState(null);
+  const [view,setView]=useState("lesson");
   const [lesson,setLesson]=useState(null);
   const [loading,setLoading]=useState(false);
   const [quiz,setQuiz]=useState(null);
@@ -996,104 +1085,261 @@ function MasterClass() {
   const [answers,setAnswers]=useState({});
   const [submitted,setSubmitted]=useState(false);
   const [feedback,setFeedback]=useState(null);
-  const [progress,setProgress]=useState({});
+  const [progress,setProgress]=useState(()=>{try{return JSON.parse(localStorage.getItem("hycre_mc_progress")||"{}");}catch{return{};}});
+  const [showFormulas,setShowFormulas]=useState(false);
+
+  const saveProgress=(mods)=>{setProgress(mods);try{localStorage.setItem("hycre_mc_progress",JSON.stringify(mods));}catch{}};
+  const completed=Object.values(progress).filter(v=>v==="complete").length;
+  const allComplete=completed===MODULES.length;
+
   const loadLesson=async(mod)=>{
-    setActiveMod(mod);setLesson(null);setQuiz(null);setAnswers({});setSubmitted(false);setFeedback(null);setLoading(true);
-    try{const r=await callAI("You are a senior CRE capital markets educator. Generate a structured lesson for CRE capital finders. Format with ## SECTION headers, practical examples with real numbers, and actionable takeaways. 400 words. Be specific.","Write a complete lesson on: \""+mod.title+"\". Topics: "+mod.topics.join(", ")+". Include 2-3 real-world examples with numbers.");setLesson(r);setProgress(p=>({...p,[mod.id]:"started"}));}
-    catch{setLesson("Error loading lesson.");}
+    setActiveMod(mod);setLesson(null);setQuiz(null);setAnswers({});setSubmitted(false);setFeedback(null);setView("lesson");setShowFormulas(false);setLoading(true);
+    if(progress[mod.id]!=="complete")saveProgress({...progress,[mod.id]:"started"});
+    try{
+      const r=await callAI(
+        "You are a senior CRE capital markets educator writing a premium training lesson for CRE professionals. Write a detailed, expert-level lesson. Use ## for main section headers. Use **bold** for key terms and numbers. Use bullet points (- ) for lists. Include real dollar amounts, percentages, and market data. Be specific, practical, and authoritative. Write approximately 1,400-1,600 words. Structure: ## Overview, ## Core Concepts, ## Real-World Examples (2-3 specific deal scenarios with real numbers), ## Common Mistakes to Avoid, ## Key Takeaways, ## What to Do This Week (3 specific action items)",
+        "Write a complete expert CRE training lesson: \""+mod.title+"\" — "+mod.subtitle+". Cover in depth: "+mod.topics.join(", ")+". Include specific dollar amounts, percentages, market benchmarks, and real deal examples. This should read like content from a $2,995 CRE course."
+      );
+      setLesson(r);
+    }catch{setLesson("Error loading lesson. Please try again.");}
     setLoading(false);
   };
+
   const loadQuiz=async()=>{
-    setQLoading(true);
-    try{const r=await callAI("Generate a 3-question multiple choice quiz. Return ONLY valid JSON. No markdown. Format: {questions:[{q:string,options:string[4],answer:number(0-3),explanation:string}]}","Create 3-question CRE quiz on: "+activeMod.title+". JSON only.");const clean=r.replace(/```json|```/g,"").trim();setQuiz(JSON.parse(clean));}
-    catch{setQuiz({questions:[{q:"Quiz unavailable.",options:["Retry"],answer:0,explanation:""}]});}
+    setQLoading(true);setView("quiz");
+    try{
+      const r=await callAI(
+        "Generate a 5-question multiple choice quiz. Return ONLY valid JSON, no markdown, no backticks. Format exactly: {questions:[{q:string,options:[string,string,string,string],answer:number,explanation:string,difficulty:\"easy\"|\"medium\"|\"hard\"}]}",
+        "Create a 5-question CRE professional quiz on: \""+activeMod.title+"\". Topics: "+activeMod.topics.join(", ")+". Mix difficulty: 1 easy, 2 medium, 2 hard. Test practical knowledge a CRE capital finder needs on the job. Include specific numbers and scenarios. Explanations should be 2-3 sentences. JSON only."
+      );
+      const clean=r.replace(/```json|```/g,"").trim();
+      setQuiz(JSON.parse(clean));
+    }catch{setQuiz({questions:[{q:"Quiz unavailable — please retry.",options:["OK"],answer:0,explanation:"",difficulty:"easy"}]});}
     setQLoading(false);
   };
+
   const submitQuiz=()=>{
     setSubmitted(true);
     const correct=quiz.questions.filter((q,i)=>parseInt(answers[i])===q.answer).length;
     const score=Math.round((correct/quiz.questions.length)*100);
     setFeedback({score,correct,total:quiz.questions.length});
-    if(score>=67)setProgress(p=>({...p,[activeMod.id]:"complete"}));
+    if(score>=70)saveProgress({...progress,[activeMod.id]:"complete"});
   };
-  const completed=Object.values(progress).filter(v=>v==="complete").length;
+
   if(!activeMod) return (
-    <div className="au" style={{maxWidth:780}}>
-      <h2 style={H2}>CRE AI MasterClass</h2>
-      <p style={{...Sub,marginBottom:6}}>5-module AI-powered training. Each lesson generated live by your AI advisor.</p>
-      <div style={{display:"flex",alignItems:"center",gap:14,margin:"16px 0 28px"}}>
-        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"7px 14px",display:"flex",alignItems:"center",gap:8}}><span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,fontWeight:600,color:C.goldBright}}>{completed}</span><span style={{fontSize:11,color:C.muted}}>of 5 complete</span></div>
-        <div style={{flex:1,height:5,background:C.border,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${(completed/5)*100}%`,background:`linear-gradient(90deg, ${C.gold}, ${C.goldBright})`,transition:"width .5s"}}/></div>
+    <div className="au" style={{maxWidth:820}}>
+      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:12,marginBottom:20}}>
+        <div><h2 style={H2}>CRE AI MasterClass</h2><p style={{...Sub,marginBottom:0}}>10-module professional training. Expert AI lessons, formula reference cards, and certification quizzes.</p></div>
+        {allComplete&&<button onClick={()=>{setActiveMod("cert");}} style={{...btnGold,padding:"8px 18px",fontSize:12,display:"flex",alignItems:"center",gap:6}}><Award size={13}/>View Certificate</button>}
       </div>
-      <div style={{display:"flex",flexDirection:"column",gap:12}}>
-        {MODULES.map(m=>{
+      <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:"16px 20px",marginBottom:24}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+          <span style={{fontSize:13,color:C.text,fontWeight:500}}>{completed} of {MODULES.length} modules complete</span>
+          <span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:C.gold}}>{Math.round((completed/MODULES.length)*100)}%</span>
+        </div>
+        <div style={{height:6,background:C.border,borderRadius:3,overflow:"hidden"}}>
+          <div style={{height:"100%",width:`${(completed/MODULES.length)*100}%`,background:`linear-gradient(90deg,${C.gold},${C.goldBright})`,transition:"width .6s ease",borderRadius:3}}/>
+        </div>
+        <div style={{display:"flex",gap:24,marginTop:12}}>
+          {[["Complete",completed],["Remaining",MODULES.length-completed],["Est. Total",MODULES.length*1.1+"h"]].map(([l,v])=>(
+            <div key={l}><div style={{fontSize:18,fontWeight:600,color:C.white,fontFamily:"'Cormorant Garamond',serif"}}>{v}</div><div style={{fontSize:10,color:C.dim}}>{l}</div></div>
+          ))}
+        </div>
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {MODULES.map((m,idx)=>{
           const prog=progress[m.id];
           return(
-            <div key={m.id} onClick={()=>loadLesson(m)} style={{background:C.surface,border:`1px solid ${prog==="complete"?C.successBorder:C.border}`,borderRadius:14,padding:"20px 22px",cursor:"pointer",display:"flex",alignItems:"center",gap:16,transition:"all .2s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=m.color} onMouseLeave={e=>e.currentTarget.style.borderColor=prog==="complete"?C.successBorder:C.border}>
-              <div style={{width:50,height:50,borderRadius:12,background:`${m.color}14`,border:`1px solid ${m.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{m.icon}</div>
-              <div style={{flex:1}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}><h3 style={{fontSize:15,fontWeight:500,color:C.white}}>{m.title}</h3>{prog==="complete"&&<CheckCircle size={13} color={C.success}/>}{prog==="started"&&<Clock size={13} color={C.warn}/>}</div>
-                <p style={{fontSize:12,color:C.muted,marginBottom:6}}>{m.subtitle}</p>
-                <span style={{fontSize:11,color:C.dim}}><Clock size={10} style={{verticalAlign:"middle",marginRight:3}}/>{m.duration} · {m.topics.length} topics</span>
+            <div key={m.id} onClick={()=>loadLesson(m)} style={{background:C.surface,border:`1px solid ${prog==="complete"?C.successBorder:prog==="started"?C.borderGold:C.border}`,borderRadius:14,padding:"18px 20px",cursor:"pointer",display:"flex",alignItems:"center",gap:16,transition:"border-color .2s"}}
+              onMouseEnter={e=>e.currentTarget.style.borderColor=prog==="complete"?C.successBorder:m.color}
+              onMouseLeave={e=>e.currentTarget.style.borderColor=prog==="complete"?C.successBorder:prog==="started"?C.borderGold:C.border}>
+              <div style={{width:48,height:48,borderRadius:12,background:`${m.color}14`,border:`1px solid ${m.color}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{m.icon}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
+                  <span style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.dim}}>MODULE {String(idx+1).padStart(2,"0")}</span>
+                  {prog==="complete"&&<span style={{fontSize:9,padding:"1px 6px",borderRadius:3,background:C.successBg,color:C.success,fontFamily:"'DM Mono',monospace"}}>COMPLETE</span>}
+                  {prog==="started"&&<span style={{fontSize:9,padding:"1px 6px",borderRadius:3,background:`${C.warn}18`,color:C.warn,fontFamily:"'DM Mono',monospace"}}>IN PROGRESS</span>}
+                </div>
+                <h3 style={{fontSize:14,fontWeight:600,color:C.white,marginBottom:3}}>{m.title}</h3>
+                <p style={{fontSize:11,color:C.muted}}>{m.subtitle}</p>
+                <div style={{display:"flex",gap:14,marginTop:6}}>
+                  <span style={{fontSize:10,color:C.dim}}><Clock size={9} style={{verticalAlign:"middle",marginRight:3}}/>{m.duration}</span>
+                  <span style={{fontSize:10,color:C.dim}}>{m.topics.length} topics</span>
+                  {m.formulas&&<span style={{fontSize:10,color:C.dim}}>{m.formulas.length} formulas</span>}
+                </div>
               </div>
-              <button style={{display:"flex",alignItems:"center",gap:5,background:"transparent",border:`1px solid ${m.color}55`,borderRadius:7,padding:"7px 14px",color:m.color,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}><Play size={11}/>{prog==="complete"?"Review":prog==="started"?"Continue":"Start"}</button>
+              <button style={{flexShrink:0,display:"flex",alignItems:"center",gap:5,background:prog==="complete"?C.successBg:"transparent",border:`1px solid ${prog==="complete"?C.successBorder:m.color}55`,borderRadius:7,padding:"7px 14px",color:prog==="complete"?C.success:m.color,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"}}>
+                {prog==="complete"?<><CheckCircle size={11}/>Review</>:prog==="started"?<><Play size={11}/>Continue</>:<><Play size={11}/>Start</>}
+              </button>
             </div>
           );
         })}
       </div>
     </div>
   );
-  return (
-    <div className="au" style={{maxWidth:760}}>
-      <button onClick={()=>setActiveMod(null)} style={{display:"flex",alignItems:"center",gap:5,background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:12,marginBottom:18,fontFamily:"'DM Sans',sans-serif"}}>← Back to MasterClass</button>
-      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
-        <div style={{width:44,height:44,borderRadius:10,background:`${activeMod.color}14`,border:`1px solid ${activeMod.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>{activeMod.icon}</div>
-        <div><h2 style={H2}>{activeMod.title}</h2><p style={{fontSize:12,color:C.muted}}>{activeMod.subtitle}</p></div>
-      </div>
-      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:20}}>
-        {activeMod.topics.map((t,i)=><span key={i} style={{fontSize:10,background:C.card,border:`1px solid ${C.border}`,borderRadius:4,padding:"3px 9px",color:C.muted}}>{t}</span>)}
-      </div>
-      <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:26,marginBottom:18}}>
-        {loading?<div style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"36px 0"}}><div style={{width:28,height:28,border:`2px solid ${C.borderGold}`,borderTopColor:C.goldBright,borderRadius:"50%",animation:"spin 1s linear infinite",marginBottom:10}}/><p style={{color:C.muted,fontSize:13}}>Generating AI lesson...</p></div>
-        :<div style={{fontSize:13,color:C.text,lineHeight:1.85}}>
-          {lesson?.split('\n').map((line,i)=>{
-            if(line.startsWith('## '))return<h3 key={i} style={{fontFamily:"'Cormorant Garamond',serif",fontSize:19,color:activeMod.color,margin:"18px 0 7px",fontWeight:600}}>{line.replace('## ','')}</h3>;
-            if(line.startsWith('**')&&line.endsWith('**'))return<p key={i} style={{fontWeight:600,color:C.white,marginTop:6}}>{line.replace(/\*\*/g,'')}</p>;
-            if(line.startsWith('- ')||line.startsWith('• '))return<div key={i} style={{paddingLeft:14,marginTop:3,display:"flex",gap:7}}><span style={{color:activeMod.color,flexShrink:0}}>·</span><span>{line.slice(2)}</span></div>;
-            return<p key={i} style={{marginTop:line?3:6}}>{line}</p>;
-          })}
-        </div>}
-      </div>
-      {lesson&&!loading&&<div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:22}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-          <span style={{fontSize:13,fontWeight:500,color:C.white}}>Knowledge Check</span>
-          {!quiz&&<button onClick={loadQuiz} disabled={qLoading} style={{...btnGold,padding:"6px 14px",fontSize:11,display:"flex",alignItems:"center",gap:5}}>{qLoading?<><div style={{width:10,height:10,border:`2px solid ${C.bg}55`,borderTopColor:C.bg,borderRadius:"50%",animation:"spin 1s linear infinite"}}/>Loading</>:<><Zap size={11}/>Generate Quiz</>}</button>}
+
+  if(activeMod==="cert") return (
+    <div className="au" style={{maxWidth:700}}>
+      <button onClick={()=>setActiveMod(null)} style={{display:"flex",alignItems:"center",gap:5,background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:12,marginBottom:20,fontFamily:"'DM Sans',sans-serif"}}>← Back to MasterClass</button>
+      <div style={{background:`linear-gradient(135deg,${C.surface},#0D1525)`,border:`2px solid ${C.borderGold}`,borderRadius:20,padding:"48px 44px",textAlign:"center"}}>
+        <div style={{width:64,height:64,background:`linear-gradient(135deg,${C.gold},${C.goldBright})`,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px"}}><Award size={30} color={C.bg}/></div>
+        <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,letterSpacing:".2em",color:C.gold,marginBottom:8}}>CERTIFICATE OF COMPLETION</div>
+        <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:36,color:C.white,fontWeight:600,marginBottom:4}}>CRE AI MasterClass</h1>
+        <p style={{color:C.muted,fontSize:14,marginBottom:28}}>Has successfully completed all 10 modules of the HyCRE.ai Commercial Real Estate Capital Intelligence Training Program</p>
+        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:"16px 24px",display:"inline-block",marginBottom:28}}>
+          <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:C.muted,marginBottom:4}}>CREDENTIAL EARNED</div>
+          <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,color:C.goldBright}}>CRE Capital Intelligence Specialist™</div>
+          <div style={{fontSize:11,color:C.dim,marginTop:4}}>Issued by HyCRE.ai · A Huit.AI Product · Built From Alaska.</div>
         </div>
-        {quiz&&<div>
-          {quiz.questions?.map((q,qi)=>(
-            <div key={qi} style={{marginBottom:16,padding:14,background:C.card,borderRadius:9,border:`1px solid ${C.border}`}}>
-              <p style={{fontSize:13,fontWeight:500,color:C.white,marginBottom:10}}>{qi+1}. {q.q}</p>
-              <div style={{display:"flex",flexDirection:"column",gap:5}}>
-                {q.options?.map((opt,oi)=>{
-                  const sel=parseInt(answers[qi])===oi,corr=submitted&&oi===q.answer,wrong=submitted&&sel&&oi!==q.answer;
-                  return<button key={oi} onClick={()=>!submitted&&setAnswers(a=>({...a,[qi]:oi}))} style={{textAlign:"left",padding:"8px 12px",borderRadius:6,border:`1px solid ${corr?C.successBorder:wrong?C.dangerBorder:sel?C.borderGold:C.border}`,background:corr?C.successBg:wrong?C.dangerBg:sel?`${C.goldMuted}18`:"transparent",color:corr?C.success:wrong?C.danger:sel?C.gold:C.muted,fontSize:12,cursor:submitted?"default":"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:7}}>
-                    {corr&&<CheckCircle size={11} color={C.success}/>}{wrong&&<XCircle size={11} color={C.danger}/>}{opt}
-                  </button>;
-                })}
-              </div>
-              {submitted&&q.explanation&&<p style={{fontSize:10,color:C.muted,marginTop:8,padding:"6px 10px",background:C.card2,borderRadius:5}}>💡 {q.explanation}</p>}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:28}}>
+          {[["10","Modules"],["50+","Topics"],["30+","Formulas"]].map(([v,l])=>(
+            <div key={l} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 8px"}}>
+              <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,color:C.goldBright,fontWeight:700}}>{v}</div>
+              <div style={{fontSize:10,color:C.muted}}>{l}</div>
             </div>
           ))}
-          {!submitted?<button onClick={submitQuiz} disabled={Object.keys(answers).length<(quiz.questions?.length||0)} style={{...btnGold,padding:"9px 22px",fontSize:12,display:"flex",alignItems:"center",gap:6}}><CheckCircle size={13}/>Submit Answers</button>
-          :feedback&&<div style={{background:feedback.score>=67?C.successBg:C.warnBg,border:`1px solid ${feedback.score>=67?C.successBorder:C.warnBorder}`,borderRadius:9,padding:14,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <div><div style={{fontSize:15,fontWeight:600,color:feedback.score>=67?C.success:C.warn}}>{feedback.score}% — {feedback.correct}/{feedback.total} correct</div><div style={{fontSize:11,color:C.muted}}>{feedback.score>=67?"Module complete!":"Review the lesson and retry."}</div></div>
-            {feedback.score>=67&&<button onClick={()=>setActiveMod(null)} style={{...btnGold,padding:"7px 16px",fontSize:11}}>Next Module →</button>}
-          </div>}
-        </div>}
-      </div>}
+        </div>
+        <button onClick={()=>window.print()} style={{...btnGold,padding:"10px 28px",fontSize:13,display:"inline-flex",alignItems:"center",gap:7}}><Download size={14}/>Print / Save PDF</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="au" style={{maxWidth:800}}>
+      <button onClick={()=>setActiveMod(null)} style={{display:"flex",alignItems:"center",gap:5,background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:12,marginBottom:16,fontFamily:"'DM Sans',sans-serif"}}>← Back to MasterClass</button>
+      <div style={{background:C.surface,border:`1px solid ${activeMod.color}44`,borderRadius:14,padding:"18px 20px",marginBottom:16}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <div style={{width:46,height:46,borderRadius:11,background:`${activeMod.color}14`,border:`1px solid ${activeMod.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{activeMod.icon}</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.dim,marginBottom:3}}>MODULE {String(MODULES.findIndex(m=>m.id===activeMod.id)+1).padStart(2,"0")} · {activeMod.duration}</div>
+            <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,color:C.white,fontWeight:600,marginBottom:2}}>{activeMod.title}</h2>
+            <p style={{fontSize:12,color:C.muted}}>{activeMod.subtitle}</p>
+          </div>
+          {progress[activeMod.id]==="complete"&&<div style={{display:"flex",alignItems:"center",gap:5,padding:"5px 12px",background:C.successBg,border:`1px solid ${C.successBorder}`,borderRadius:6}}><CheckCircle size={11} color={C.success}/><span style={{fontSize:10,color:C.success}}>Complete</span></div>}
+        </div>
+        <div style={{display:"flex",gap:8,marginTop:16,borderTop:`1px solid ${C.border}`,paddingTop:14,flexWrap:"wrap"}}>
+          {[["lesson","📖 Lesson"],["quiz","✏️ Quiz"]].map(([v,l])=>(
+            <button key={v} onClick={()=>v==="quiz"&&!quiz?loadQuiz():setView(v)} disabled={v==="quiz"&&loading} style={{padding:"6px 16px",borderRadius:7,border:`1px solid ${view===v?activeMod.color:C.border}`,background:view===v?`${activeMod.color}18`:"transparent",color:view===v?activeMod.color:C.muted,fontSize:12,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:view===v?600:400}}>
+              {v==="quiz"&&qLoading?"Loading...":l}
+            </button>
+          ))}
+          {activeMod.formulas&&activeMod.formulas.length>0&&<button onClick={()=>setShowFormulas(s=>!s)} style={{padding:"6px 16px",borderRadius:7,border:`1px solid ${showFormulas?C.borderGold:C.border}`,background:showFormulas?`${C.goldMuted}18`:"transparent",color:showFormulas?C.gold:C.muted,fontSize:12,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",marginLeft:"auto"}}>📐 Formulas ({activeMod.formulas.length})</button>}
+        </div>
+      </div>
+
+      {showFormulas&&activeMod.formulas&&activeMod.formulas.length>0&&(
+        <div style={{background:C.surface,border:`1px solid ${C.borderGold}`,borderRadius:12,padding:"16px 20px",marginBottom:16}}>
+          <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.gold,letterSpacing:".1em",marginBottom:12}}>FORMULA REFERENCE CARD · {activeMod.title.toUpperCase()}</div>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {activeMod.formulas.map((f,i)=>(
+              <div key={i} style={{background:C.card,borderRadius:9,padding:"12px 14px",border:`1px solid ${C.border}`}}>
+                <div style={{fontSize:11,fontWeight:600,color:C.text,marginBottom:6}}>{f.name}</div>
+                <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:C.gold,background:`${C.goldMuted}11`,padding:"6px 10px",borderRadius:5,marginBottom:6}}>{f.formula}</div>
+                <div style={{fontSize:10,color:C.dim}}>Example: {f.example}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {view==="lesson"&&(
+        <>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
+            {activeMod.topics.map((t,i)=><span key={i} style={{fontSize:10,background:C.card,border:`1px solid ${C.border}`,borderRadius:4,padding:"3px 9px",color:C.dim}}>{t}</span>)}
+          </div>
+          <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:28}}>
+            {loading?(
+              <div style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"48px 0"}}>
+                <div style={{width:32,height:32,border:`2px solid ${C.borderGold}`,borderTopColor:C.goldBright,borderRadius:"50%",animation:"spin 1s linear infinite",marginBottom:14}}/>
+                <p style={{color:C.muted,fontSize:13,marginBottom:4}}>Generating expert lesson...</p>
+                <p style={{color:C.dim,fontSize:11}}>Building a full 1,500-word lesson on {activeMod.title}</p>
+              </div>
+            ):(
+              <div style={{fontSize:13,color:C.text,lineHeight:1.9}}>
+                {lesson&&lesson.split('\n').map((line,i)=>{
+                  if(line.startsWith('## '))return<h2 key={i} style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,color:activeMod.color,margin:"24px 0 10px",fontWeight:600,borderBottom:`1px solid ${activeMod.color}22`,paddingBottom:6}}>{line.replace('## ','')}</h2>;
+                  if(line.startsWith('### '))return<h3 key={i} style={{fontSize:14,color:C.white,margin:"16px 0 6px",fontWeight:600}}>{line.replace('### ','')}</h3>;
+                  if(line.match(/^\*\*(.*)\*\*$/)&&!line.match(/\*\*.*\*\*.*\*\*/))return<p key={i} style={{fontWeight:600,color:C.white,margin:"8px 0 4px"}}>{line.replace(/\*\*/g,'')}</p>;
+                  if(line.startsWith('- ')||line.startsWith('• '))return<div key={i} style={{paddingLeft:16,margin:"4px 0",display:"flex",gap:8}}><span style={{color:activeMod.color,flexShrink:0,marginTop:3}}>▸</span><span>{line.slice(2)}</span></div>;
+                  if(line==='')return<div key={i} style={{height:8}}/>;
+                  return<p key={i} style={{margin:"4px 0"}} dangerouslySetInnerHTML={{__html:line.replace(/\*\*(.*?)\*\*/g,'<strong style="color:#DDE2EE">$1</strong>')}}></p>;
+                })}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {view==="quiz"&&(
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          {qLoading?(
+            <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:"48px 28px",display:"flex",flexDirection:"column",alignItems:"center"}}>
+              <div style={{width:28,height:28,border:`2px solid ${C.borderGold}`,borderTopColor:C.goldBright,borderRadius:"50%",animation:"spin 1s linear infinite",marginBottom:12}}/>
+              <p style={{color:C.muted,fontSize:13}}>Generating 5-question quiz...</p>
+            </div>
+          ):quiz&&(
+            <>
+              <p style={{fontSize:12,color:C.muted,marginBottom:4}}>{submitted?`Score: ${feedback?.correct}/${feedback?.total} correct — ${feedback?.score}%`:`Answer all ${quiz.questions?.length} questions to submit`}</p>
+              {quiz.questions&&quiz.questions.map((q,qi)=>{
+                const diffColor=q.difficulty==="hard"?C.danger:q.difficulty==="medium"?C.warn:C.success;
+                return(
+                  <div key={qi} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:"18px 18px 14px"}}>
+                    <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:12}}>
+                      <div style={{width:22,height:22,borderRadius:"50%",background:`${activeMod.color}22`,border:`1px solid ${activeMod.color}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:activeMod.color,flexShrink:0}}>{qi+1}</div>
+                      <div style={{flex:1}}>
+                        {q.difficulty&&<span style={{fontSize:8,padding:"1px 6px",borderRadius:3,background:`${diffColor}18`,color:diffColor,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",display:"inline-block",marginBottom:5}}>{q.difficulty}</span>}
+                        <p style={{fontSize:13,fontWeight:500,color:C.white,lineHeight:1.5}}>{q.q}</p>
+                      </div>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                      {q.options&&q.options.map((opt,oi)=>{
+                        const sel=parseInt(answers[qi])===oi;
+                        const corr=submitted&&oi===q.answer;
+                        const wrong=submitted&&sel&&oi!==q.answer;
+                        return(
+                          <button key={oi} onClick={()=>!submitted&&setAnswers(a=>({...a,[qi]:oi}))}
+                            style={{textAlign:"left",padding:"10px 14px",borderRadius:8,border:`1px solid ${corr?C.successBorder:wrong?C.dangerBorder:sel?C.borderGold:C.border}`,background:corr?C.successBg:wrong?C.dangerBg:sel?`${C.goldMuted}18`:"transparent",color:corr?C.success:wrong?C.danger:sel?C.gold:C.muted,fontSize:12,cursor:submitted?"default":"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:8,transition:"all .15s"}}>
+                            <span style={{width:16,height:16,borderRadius:"50%",border:`1px solid ${corr?C.success:wrong?C.danger:sel?C.gold:C.border}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                              {corr&&<Check size={9} color={C.success}/>}{wrong&&<X size={9} color={C.danger}/>}
+                              {!corr&&!wrong&&sel&&<div style={{width:6,height:6,borderRadius:"50%",background:C.gold}}/>}
+                            </span>
+                            {opt}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {submitted&&q.explanation&&<div style={{marginTop:10,padding:"10px 12px",background:C.card,borderRadius:7,border:`1px solid ${C.border}`,fontSize:11,color:C.muted,lineHeight:1.6}}><span style={{color:C.gold,fontWeight:600}}>💡 </span>{q.explanation}</div>}
+                  </div>
+                );
+              })}
+              {!submitted?(
+                <button onClick={submitQuiz} disabled={Object.keys(answers).length<(quiz.questions&&quiz.questions.length||0)} style={{...btnGold,padding:"12px 0",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",gap:8,opacity:Object.keys(answers).length<(quiz.questions&&quiz.questions.length||0)?0.5:1}}>
+                  <CheckCircle size={14}/>Submit Answers
+                </button>
+              ):feedback&&(
+                <div style={{background:feedback.score>=70?C.successBg:C.warnBg,border:`1px solid ${feedback.score>=70?C.successBorder:C.warnBorder}`,borderRadius:12,padding:"18px 20px"}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
+                    <div>
+                      <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:700,color:feedback.score>=70?C.success:C.warn,marginBottom:4}}>{feedback.score}%</div>
+                      <div style={{fontSize:13,color:feedback.score>=70?C.success:C.warn,fontWeight:500}}>{feedback.correct}/{feedback.total} correct · {feedback.score>=70?"Module complete! 🎉":"Need 70% to pass — review the lesson and retry."}</div>
+                    </div>
+                    <div style={{display:"flex",gap:8}}>
+                      {feedback.score<70&&<button onClick={()=>{setAnswers({});setSubmitted(false);setFeedback(null);}} style={{...btnOutline,padding:"8px 16px",fontSize:12}}>Retry Quiz</button>}
+                      {feedback.score>=70&&<button onClick={()=>setActiveMod(null)} style={{...btnGold,padding:"8px 18px",fontSize:12}}>
+                        {allComplete?"View Certificate →":"Next Module →"}
+                      </button>}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
+
 
 /* ─── MARKET FEED ─── */
 function MarketFeed() {
