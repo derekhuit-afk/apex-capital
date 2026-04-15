@@ -6,7 +6,7 @@ import {
   Activity, Shield, Search, Download, RefreshCw, Filter,
   Globe, Phone, Mail, ExternalLink, Layers, Eye, EyeOff,
   CheckCircle, XCircle, Info, Send, User, Play, Clock,
-  ChevronDown, LogOut, MapPin, DollarSign, Star, Users
+  ChevronDown, LogOut, MapPin, DollarSign, Star, Users, Copy
 } from "lucide-react";
 
 /* ─── AI PROXY ─── */
@@ -63,18 +63,75 @@ const TIERS = {
 };
 
 const LENDERS = [
-  { id:1,name:"Pinnacle National Bank",type:"National Bank",logo:"🏛",minLoan:500000,maxLoan:50000000,maxLTV:75,minDSCR:1.25,propTypes:["Multifamily","Office","Retail","Industrial","Mixed-Use"],markets:"Nationwide",rateRange:"6.25–7.50%",term:"5,7,10yr",amort:"25–30yr",contact:"cre@pinnaclenational.com",phone:"(800) 555-0110",specialty:"Agency multifamily, stabilized CRE" },
-  { id:2,name:"Meridian Capital Group",type:"Debt Fund",logo:"💼",minLoan:2000000,maxLoan:75000000,maxLTV:80,minDSCR:1.20,propTypes:["Multifamily","Office","Hotel","Mixed-Use","Self-Storage"],markets:"Nationwide",rateRange:"7.00–9.50%",term:"2–5yr bridge",amort:"Interest only",contact:"deals@meridiancg.com",phone:"(212) 555-0142",specialty:"Bridge, value-add, transitional assets" },
-  { id:3,name:"Pacific Life Lending",type:"Life Company",logo:"🏢",minLoan:5000000,maxLoan:200000000,maxLTV:65,minDSCR:1.30,propTypes:["Multifamily","Office","Industrial","Retail"],markets:"Top 50 MSAs",rateRange:"5.85–6.75%",term:"10,15,20yr",amort:"25–30yr",contact:"lending@pacificlife.com",phone:"(800) 555-0188",specialty:"Long-term fixed rate, core assets" },
-  { id:4,name:"Atlas CMBS Conduit",type:"CMBS",logo:"📊",minLoan:3000000,maxLoan:100000000,maxLTV:75,minDSCR:1.25,propTypes:["Office","Retail","Hotel","Industrial","Multifamily"],markets:"Nationwide",rateRange:"6.50–7.25%",term:"10yr",amort:"30yr",contact:"originations@atlascmbs.com",phone:"(646) 555-0177",specialty:"CMBS/conduit, 10yr fixed non-recourse" },
-  { id:5,name:"Northstar Credit Union",type:"Credit Union",logo:"🤝",minLoan:250000,maxLoan:10000000,maxLTV:80,minDSCR:1.20,propTypes:["Multifamily","Retail","Office","Mixed-Use"],markets:"AK, WA, OR, MT, ID",rateRange:"6.00–7.25%",term:"5,7yr",amort:"20–25yr",contact:"business@northstarccu.com",phone:"(907) 555-0190",specialty:"Alaska/Pacific NW, small-balance CRE" },
-  { id:6,name:"Fortress Bridge Capital",type:"Bridge",logo:"⚡",minLoan:1000000,maxLoan:30000000,maxLTV:85,minDSCR:1.10,propTypes:["Multifamily","Office","Retail","Industrial","Hotel","Mixed-Use","Self-Storage"],markets:"Nationwide",rateRange:"9.00–12.50%",term:"12–36 months",amort:"Interest only",contact:"bridge@fortresscap.com",phone:"(310) 555-0133",specialty:"Fast close, value-add, ground-up" },
-  { id:7,name:"Cascade Life Insurance",type:"Life Company",logo:"🏗",minLoan:10000000,maxLoan:500000000,maxLTV:60,minDSCR:1.35,propTypes:["Office","Industrial","Multifamily","Retail"],markets:"Top 25 MSAs",rateRange:"5.50–6.40%",term:"15,20,25yr",amort:"30yr",contact:"cre@cascadelife.com",phone:"(503) 555-0111",specialty:"Core trophy assets, ultra-long term" },
-  { id:8,name:"Northern Lights Credit Union",type:"Credit Union",logo:"✨",minLoan:100000,maxLoan:5000000,maxLTV:80,minDSCR:1.15,propTypes:["Multifamily","Retail","Office","Mixed-Use"],markets:"AK, WA, MT",rateRange:"5.75–6.75%",term:"5,7yr",amort:"20yr",contact:"business@nlcu.org",phone:"(907) 555-0199",specialty:"Alaska-based, small balance, local relationships" },
-  { id:9,name:"CoreVest Finance",type:"Debt Fund",logo:"🎯",minLoan:1000000,maxLoan:50000000,maxLTV:75,minDSCR:1.20,propTypes:["Multifamily","Self-Storage","Mobile Home Park","Industrial"],markets:"Nationwide",rateRange:"7.00–8.75%",term:"5,7yr",amort:"25–30yr",contact:"originations@corevest.com",phone:"(888) 555-0166",specialty:"SFR portfolios, small balance multifamily" },
-  { id:10,name:"Apex Private Mortgage",type:"Bridge",logo:"🚀",minLoan:200000,maxLoan:10000000,maxLTV:90,minDSCR:1.00,propTypes:["Multifamily","Office","Retail","Industrial","Mixed-Use","Hotel","Self-Storage"],markets:"Nationwide",rateRange:"11.00–15.00%",term:"6–18 months",amort:"Interest only",contact:"fast@apexprivate.com",phone:"(800) 555-0100",specialty:"Any deal, any condition, 24hr approval" },
-  { id:11,name:"Pacific Rim Capital",type:"Debt Fund",logo:"🌏",minLoan:3000000,maxLoan:100000000,maxLTV:75,minDSCR:1.20,propTypes:["Multifamily","Industrial","Office","Hotel","Mixed-Use"],markets:"CA, WA, OR, HI, AK",rateRange:"7.25–9.00%",term:"2–5yr",amort:"Interest only",contact:"west@pacificrimcap.com",phone:"(415) 555-0122",specialty:"West Coast, Pacific NW, Alaska deals" },
-  { id:12,name:"Summit Community Bank",type:"Community Bank",logo:"🏘",minLoan:200000,maxLoan:8000000,maxLTV:80,minDSCR:1.20,propTypes:["Multifamily","Retail","Office","Mixed-Use","Self-Storage"],markets:"AK, MT, ID, WY",rateRange:"6.25–7.50%",term:"5,7,10yr",amort:"20–25yr",contact:"loans@summitcommunity.com",phone:"(406) 555-0145",specialty:"Mountain West, rural markets" },
+  // ─── AGENCY / GSE MULTIFAMILY ───
+  { id:1, name:"Walker & Dunlop", type:"Agency/GSE", logo:"🏛", minLoan:1000000, maxLoan:500000000, maxLTV:80, minDSCR:1.25, propTypes:["Multifamily","Affordable Housing","Senior Housing"], markets:"Nationwide", rateRange:"5.85–7.10%", term:"5,7,10,12yr", amort:"30yr", contact:"wdinfo@walkerdunlop.com", phone:"(301) 215-5500", website:"walkerdunlop.com", specialty:"#1 Fannie Mae/Freddie Mac DUS lender. Multifamily, affordable, seniors housing.", notes:"Largest commercial real estate finance company in the US by Fannie Mae volume." },
+  { id:2, name:"Berkadia Commercial Mortgage", type:"Agency/GSE", logo:"🏛", minLoan:1000000, maxLoan:500000000, maxLTV:80, minDSCR:1.25, propTypes:["Multifamily","Affordable Housing","Senior Housing","Student Housing"], markets:"Nationwide", rateRange:"5.90–7.20%", term:"5,7,10yr", amort:"30yr", contact:"berkadia.com/contact", phone:"(215) 328-5500", website:"berkadia.com", specialty:"Top Fannie Mae/Freddie Mac/HUD lender. Full-service multifamily capital." },
+  { id:3, name:"Greystone", type:"Agency/GSE", logo:"🏛", minLoan:1000000, maxLoan:500000000, maxLTV:80, minDSCR:1.25, propTypes:["Multifamily","Affordable Housing","Healthcare","Senior Housing"], markets:"Nationwide", rateRange:"5.80–7.15%", term:"5,7,10,35yr", amort:"30–35yr", contact:"greyco.com/contact", phone:"(212) 896-9800", website:"greyco.com", specialty:"Fannie Mae, Freddie Mac, HUD/FHA, CMBS multifamily specialist." },
+  { id:4, name:"CBRE Multifamily Capital", type:"Agency/GSE", logo:"🏢", minLoan:1000000, maxLoan:1000000000, maxLTV:80, minDSCR:1.25, propTypes:["Multifamily","Affordable Housing","Senior Housing","Student Housing"], markets:"Nationwide", rateRange:"5.75–7.00%", term:"5,7,10,12yr", amort:"30yr", contact:"cbre.com/real-estate-finance", phone:"(214) 979-6100", website:"cbre.com", specialty:"Fannie/Freddie DUS, HUD, life company, CMBS, bridge. Full spectrum." },
+  { id:5, name:"Lument (formerly ORIX Real Estate Capital)", type:"Agency/GSE", logo:"🏛", minLoan:1000000, maxLoan:500000000, maxLTV:80, minDSCR:1.25, propTypes:["Multifamily","Affordable Housing","Senior Housing","Healthcare"], markets:"Nationwide", rateRange:"5.85–7.20%", term:"5,7,10,35yr", amort:"30–35yr", contact:"lument.com/contact", phone:"(212) 543-7000", website:"lument.com", specialty:"Fannie/Freddie/HUD multifamily, senior housing, healthcare lending." },
+
+  // ─── LIFE COMPANIES ───
+  { id:6, name:"MetLife Investment Management", type:"Life Company", logo:"🏢", minLoan:10000000, maxLoan:500000000, maxLTV:65, minDSCR:1.30, propTypes:["Multifamily","Office","Industrial","Retail","Hotel"], markets:"Top 30 MSAs", rateRange:"5.50–6.75%", term:"10,15,20yr", amort:"25–30yr", contact:"metlife.com/institutional/strategies/real-estate", phone:"(973) 355-4000", website:"metlife.com", specialty:"Core, core-plus stabilized assets. One of largest CRE debt investors in the US." },
+  { id:7, name:"PGIM Real Estate Finance (Prudential)", type:"Life Company", logo:"🏢", minLoan:5000000, maxLoan:500000000, maxLTV:65, minDSCR:1.30, propTypes:["Multifamily","Office","Industrial","Retail","Hotel","Self-Storage"], markets:"Top 50 MSAs", rateRange:"5.55–6.80%", term:"10,15,20yr", amort:"25–30yr", contact:"pgimrealestate.com/contact", phone:"(973) 367-7521", website:"pgimrealestate.com", specialty:"Global institutional lender. Full capital stack across asset types." },
+  { id:8, name:"New York Life Real Estate Investors", type:"Life Company", logo:"🏢", minLoan:5000000, maxLoan:300000000, maxLTV:65, minDSCR:1.30, propTypes:["Multifamily","Office","Industrial","Retail"], markets:"Top 30 MSAs", rateRange:"5.50–6.70%", term:"10,15,20yr", amort:"25–30yr", contact:"newyorklifeinvestments.com", phone:"(212) 576-7000", website:"newyorklifeinvestments.com", specialty:"Long-term fixed rate. Conservative underwriting. Core stabilized properties." },
+  { id:9, name:"Northwestern Mutual Real Estate", type:"Life Company", logo:"🏢", minLoan:10000000, maxLoan:400000000, maxLTV:65, minDSCR:1.35, propTypes:["Multifamily","Office","Industrial","Retail"], markets:"Top 25 MSAs", rateRange:"5.45–6.65%", term:"10,15,20yr", amort:"25–30yr", contact:"northwesternmutual.com/financial-professionals/real-estate", phone:"(414) 271-1444", website:"northwesternmutual.com", specialty:"Conservative life company. Premier core assets only. Ultra-long term fixed." },
+  { id:10, name:"Principal Real Estate Investors", type:"Life Company", logo:"🏢", minLoan:5000000, maxLoan:300000000, maxLTV:65, minDSCR:1.30, propTypes:["Multifamily","Office","Industrial","Retail","Hotel"], markets:"Top 50 MSAs", rateRange:"5.60–6.85%", term:"10,15,20yr", amort:"25–30yr", contact:"principalam.com/real-estate", phone:"(515) 247-0920", website:"principalam.com", specialty:"Life company with full real estate debt platform." },
+  { id:11, name:"Pacific Life Real Estate Finance", type:"Life Company", logo:"🏢", minLoan:5000000, maxLoan:200000000, maxLTV:65, minDSCR:1.30, propTypes:["Multifamily","Office","Industrial","Retail"], markets:"Top 50 MSAs", rateRange:"5.60–6.90%", term:"10,15,20yr", amort:"25–30yr", contact:"pacificlife.com/corporate/contact-us", phone:"(949) 219-3011", website:"pacificlife.com", specialty:"Life company CRE debt. Strong multifamily appetite. West Coast presence." },
+  { id:12, name:"Nuveen Real Estate (TIAA)", type:"Life Company", logo:"🏢", minLoan:10000000, maxLoan:500000000, maxLTV:65, minDSCR:1.35, propTypes:["Multifamily","Office","Industrial","Retail","Hotel"], markets:"Top 25 MSAs", rateRange:"5.45–6.60%", term:"10,15,20yr", amort:"25–30yr", contact:"nuveen.com/real-estate", phone:"(312) 917-8146", website:"nuveen.com", specialty:"TIAA-backed life company. Top-tier institutional CRE debt." },
+
+  // ─── NATIONAL BANKS ───
+  { id:13, name:"JPMorgan Chase Commercial Real Estate", type:"National Bank", logo:"🏦", minLoan:1000000, maxLoan:1000000000, maxLTV:75, minDSCR:1.25, propTypes:["Multifamily","Office","Retail","Industrial","Hotel","Mixed-Use"], markets:"Nationwide", rateRange:"6.00–7.75%", term:"3,5,7,10yr", amort:"25–30yr", contact:"jpmorgan.com/commercial-banking/real-estate", phone:"(877) 425-8100", website:"jpmorgan.com", specialty:"Largest US bank by assets. Full CRE capital solutions. Balance sheet + conduit." },
+  { id:14, name:"Wells Fargo Commercial Real Estate", type:"National Bank", logo:"🏦", minLoan:1000000, maxLoan:500000000, maxLTV:75, minDSCR:1.25, propTypes:["Multifamily","Office","Retail","Industrial","Hotel","Mixed-Use","Self-Storage"], markets:"Nationwide", rateRange:"6.10–7.80%", term:"3,5,7,10yr", amort:"25–30yr", contact:"wellsfargo.com/com/financing/commercial-real-estate", phone:"(800) 869-3557", website:"wellsfargo.com", specialty:"Full-service CRE. Construction, bridge, permanent. Major DUS lender." },
+  { id:15, name:"Bank of America Commercial Real Estate", type:"National Bank", logo:"🏦", minLoan:2000000, maxLoan:500000000, maxLTV:75, minDSCR:1.25, propTypes:["Multifamily","Office","Retail","Industrial","Hotel","Mixed-Use"], markets:"Nationwide", rateRange:"6.00–7.70%", term:"3,5,7,10yr", amort:"25–30yr", contact:"bofasecurities.com/investment-banking/real-estate.html", phone:"(800) 432-1000", website:"bankofamerica.com", specialty:"Balance sheet lending. LIHTC, construction, perm. Strong institutional relationships." },
+  { id:16, name:"U.S. Bank Real Estate Finance", type:"National Bank", logo:"🏦", minLoan:1000000, maxLoan:300000000, maxLTV:75, minDSCR:1.25, propTypes:["Multifamily","Office","Retail","Industrial","Hotel","Mixed-Use","Senior Housing"], markets:"Nationwide", rateRange:"6.05–7.65%", term:"3,5,7,10yr", amort:"25–30yr", contact:"usbank.com/business-banking/commercial-real-estate.html", phone:"(800) 872-2657", website:"usbank.com", specialty:"Midwest and Western US focus. LIHTC, construction, permanent, bridge." },
+  { id:17, name:"PNC Real Estate", type:"National Bank", logo:"🏦", minLoan:1000000, maxLoan:300000000, maxLTV:75, minDSCR:1.25, propTypes:["Multifamily","Office","Retail","Industrial","Hotel","Mixed-Use","Senior Housing"], markets:"Nationwide", rateRange:"6.10–7.70%", term:"3,5,7,10yr", amort:"25–30yr", contact:"pnc.com/en/commercial-banking/products/realestate.html", phone:"(888) 762-2265", website:"pnc.com", specialty:"Full CRE capital stack. Strong Mid-Atlantic, Southeast, Midwest presence." },
+  { id:18, name:"Truist Real Estate Capital", type:"National Bank", logo:"🏦", minLoan:1000000, maxLoan:300000000, maxLTV:75, minDSCR:1.25, propTypes:["Multifamily","Office","Retail","Industrial","Hotel","Mixed-Use","Affordable Housing"], markets:"Nationwide", rateRange:"6.10–7.75%", term:"3,5,7,10yr", amort:"25–30yr", contact:"truist.com/solutions/commercial/real-estate", phone:"(800) 878-4782", website:"truist.com", specialty:"Former BB&T/SunTrust. Strong Southeast, Mid-Atlantic, Florida presence." },
+  { id:19, name:"KeyBank Real Estate Capital", type:"National Bank", logo:"🏦", minLoan:1000000, maxLoan:300000000, maxLTV:75, minDSCR:1.25, propTypes:["Multifamily","Office","Retail","Industrial","Affordable Housing","Senior Housing"], markets:"Nationwide", rateRange:"6.00–7.60%", term:"3,5,7,10yr", amort:"25–30yr", contact:"key.com/business/industries/real-estate.jsp", phone:"(888) 539-4247", website:"key.com", specialty:"Full-service CRE. Multifamily specialist. Strong Midwest, Pacific Northwest." },
+  { id:20, name:"Regions Real Estate Capital", type:"National Bank", logo:"🏦", minLoan:1000000, maxLoan:200000000, maxLTV:75, minDSCR:1.25, propTypes:["Multifamily","Office","Retail","Industrial","Hotel","Mixed-Use"], markets:"Southeast, Midwest, Texas", rateRange:"6.10–7.70%", term:"3,5,7,10yr", amort:"25–30yr", contact:"regions.com/commercial-banking/real-estate", phone:"(800) 734-4667", website:"regions.com", specialty:"Southeast and South-Central US specialist. Deep local market knowledge." },
+
+  // ─── CMBS / CONDUIT ───
+  { id:21, name:"Starwood Mortgage Capital", type:"CMBS", logo:"📊", minLoan:3000000, maxLoan:500000000, maxLTV:75, minDSCR:1.25, propTypes:["Office","Retail","Hotel","Industrial","Multifamily","Mixed-Use"], markets:"Nationwide", rateRange:"6.40–7.50%", term:"10yr", amort:"30yr", contact:"starwood.com/realestate/contact.html", phone:"(305) 695-6300", website:"starwood.com", specialty:"Major CMBS conduit lender. Non-recourse 10yr fixed. Full property spectrum." },
+  { id:22, name:"Goldman Sachs Real Estate Finance", type:"CMBS", logo:"📊", minLoan:10000000, maxLoan:2000000000, maxLTV:75, minDSCR:1.25, propTypes:["Office","Retail","Hotel","Industrial","Multifamily","Mixed-Use"], markets:"Nationwide", rateRange:"6.20–7.25%", term:"10yr", amort:"30yr", contact:"goldmansachs.com/businesses/invest-manage/real-estate", phone:"(212) 902-1000", website:"goldmansachs.com", specialty:"Institutional CMBS. Major deals, trophy assets. Full capital stack." },
+  { id:23, name:"Morgan Stanley Real Estate", type:"CMBS", logo:"📊", minLoan:5000000, maxLoan:1000000000, maxLTV:75, minDSCR:1.25, propTypes:["Office","Retail","Hotel","Industrial","Multifamily","Mixed-Use"], markets:"Nationwide", rateRange:"6.25–7.30%", term:"10yr", amort:"30yr", contact:"morganstanley.com/im/real-estate", phone:"(212) 761-4000", website:"morganstanley.com", specialty:"Global CMBS issuance. Institutional-grade properties and sponsors." },
+  { id:24, name:"Citigroup Commercial Mortgage Trust", type:"CMBS", logo:"📊", minLoan:5000000, maxLoan:500000000, maxLTV:75, minDSCR:1.25, propTypes:["Office","Retail","Hotel","Industrial","Multifamily","Mixed-Use"], markets:"Nationwide", rateRange:"6.30–7.35%", term:"10yr", amort:"30yr", contact:"citibank.com/commercial-mortgage", phone:"(212) 559-1000", website:"citi.com", specialty:"Top-tier CMBS conduit. Full loan-to-securitization platform." },
+  { id:25, name:"Rialto Mortgage Finance", type:"CMBS", logo:"📊", minLoan:2000000, maxLoan:150000000, maxLTV:75, minDSCR:1.25, propTypes:["Office","Retail","Hotel","Industrial","Multifamily","Mixed-Use","Self-Storage"], markets:"Nationwide", rateRange:"6.45–7.55%", term:"10yr", amort:"30yr", contact:"rialtomortgage.com", phone:"(305) 485-2060", website:"rialtomortgage.com", specialty:"Conduit specialist. Broad property type coverage. Competitive non-recourse pricing." },
+
+  // ─── DEBT FUNDS / MORTGAGE REITs ───
+  { id:26, name:"Blackstone Real Estate Debt Strategies", type:"Debt Fund", logo:"💼", minLoan:10000000, maxLoan:5000000000, maxLTV:80, minDSCR:1.15, propTypes:["Multifamily","Office","Industrial","Hotel","Mixed-Use","Retail","Self-Storage"], markets:"Nationwide", rateRange:"7.00–10.00%", term:"1–5yr", amort:"Interest only", contact:"blackstone.com/businesses/breds", phone:"(212) 583-5000", website:"blackstone.com", specialty:"World's largest alternative asset manager. Bridge, transitional, value-add at scale." },
+  { id:27, name:"Starwood Property Trust", type:"Debt Fund", logo:"💼", minLoan:10000000, maxLoan:1000000000, maxLTV:80, minDSCR:1.15, propTypes:["Multifamily","Office","Industrial","Hotel","Mixed-Use","Retail"], markets:"Nationwide", rateRange:"7.25–10.50%", term:"1–5yr", amort:"Interest only", contact:"starwoodpropertytrust.com", phone:"(203) 422-8000", website:"starwoodpropertytrust.com", specialty:"Large commercial mortgage REIT. Senior and mezzanine debt." },
+  { id:28, name:"ACORE Capital", type:"Debt Fund", logo:"💼", minLoan:10000000, maxLoan:500000000, maxLTV:80, minDSCR:1.10, propTypes:["Multifamily","Office","Industrial","Hotel","Mixed-Use","Retail","Self-Storage"], markets:"Nationwide", rateRange:"7.50–10.50%", term:"1–4yr", amort:"Interest only", contact:"acorecapital.com/contact", phone:"(855) 226-7300", website:"acorecapital.com", specialty:"Bridge and transitional lending specialist. $20B+ in originations." },
+  { id:29, name:"Arbor Realty Trust", type:"Debt Fund", logo:"💼", minLoan:1000000, maxLoan:500000000, maxLTV:80, minDSCR:1.20, propTypes:["Multifamily","Self-Storage","Mobile Home Park","Single-Family Rental"], markets:"Nationwide", rateRange:"6.50–9.50%", term:"1–10yr", amort:"Varies", contact:"arborrealtytrust.com/contact", phone:"(516) 506-4200", website:"arborrealtytrust.com", specialty:"Multifamily REIT. Fannie/Freddie/HUD + bridge. Major small-balance MF lender." },
+  { id:30, name:"Ladder Capital", type:"Debt Fund", logo:"💼", minLoan:2000000, maxLoan:500000000, maxLTV:80, minDSCR:1.20, propTypes:["Multifamily","Office","Industrial","Hotel","Retail","Mixed-Use","Self-Storage"], markets:"Nationwide", rateRange:"6.75–9.25%", term:"1–10yr", amort:"Varies", contact:"laddercapital.com/contact", phone:"(212) 715-2000", website:"laddercapital.com", specialty:"Commercial mortgage REIT. Balance sheet loans + CMBS. Broad appetite." },
+  { id:31, name:"Ready Capital Corporation", type:"Debt Fund", logo:"💼", minLoan:1000000, maxLoan:100000000, maxLTV:80, minDSCR:1.20, propTypes:["Multifamily","Office","Retail","Industrial","Mixed-Use","Self-Storage"], markets:"Nationwide", rateRange:"7.00–10.00%", term:"1–5yr", amort:"Interest only/30yr", contact:"readycapital.com/contact", phone:"(212) 257-4600", website:"readycapital.com", specialty:"Small and middle market CRE lender. SBA 7(a) + bridge + permanent." },
+  { id:32, name:"KKR Real Estate Finance Trust", type:"Debt Fund", logo:"💼", minLoan:10000000, maxLoan:1000000000, maxLTV:80, minDSCR:1.15, propTypes:["Multifamily","Office","Industrial","Hotel","Mixed-Use","Retail"], markets:"Nationwide", rateRange:"7.25–10.00%", term:"1–5yr", amort:"Interest only", contact:"kkr.com/businesses/real-estate", phone:"(212) 750-8300", website:"kkr.com", specialty:"KKR-sponsored mortgage REIT. Floating-rate senior loans on transitional assets." },
+  { id:33, name:"Mesa West Capital (Morgan Stanley)", type:"Debt Fund", logo:"💼", minLoan:15000000, maxLoan:500000000, maxLTV:75, minDSCR:1.20, propTypes:["Multifamily","Office","Industrial","Hotel","Mixed-Use","Retail"], markets:"Nationwide", rateRange:"7.00–9.50%", term:"2–5yr", amort:"Interest only", contact:"morganstanley.com/im/real-estate", phone:"(213) 615-4000", website:"morganstanley.com", specialty:"Institutional bridge lender backed by Morgan Stanley. Value-add specialist." },
+  { id:34, name:"Benefit Street Partners", type:"Debt Fund", logo:"💼", minLoan:5000000, maxLoan:250000000, maxLTV:80, minDSCR:1.15, propTypes:["Multifamily","Office","Industrial","Hotel","Mixed-Use","Retail","Self-Storage"], markets:"Nationwide", rateRange:"7.25–10.50%", term:"1–4yr", amort:"Interest only", contact:"benefitstreetpartners.com", phone:"(212) 588-6700", website:"benefitstreetpartners.com", specialty:"Franklin Templeton-affiliated. Bridge loans, transitional, value-add." },
+  { id:35, name:"Ares Real Estate Finance", type:"Debt Fund", logo:"💼", minLoan:10000000, maxLoan:500000000, maxLTV:80, minDSCR:1.15, propTypes:["Multifamily","Office","Industrial","Hotel","Mixed-Use","Retail"], markets:"Nationwide", rateRange:"7.00–10.00%", term:"1–5yr", amort:"Interest only", contact:"aresmgmt.com/real-estate", phone:"(310) 201-4100", website:"aresmgmt.com", specialty:"$40B+ AUM real estate platform. Senior and subordinate debt." },
+
+  // ─── BRIDGE / HARD MONEY ───
+  { id:36, name:"Broadmark Realty Capital", type:"Bridge", logo:"⚡", minLoan:500000, maxLoan:50000000, maxLTV:75, minDSCR:1.00, propTypes:["Multifamily","Office","Retail","Industrial","Mixed-Use","Hotel","Land"], markets:"Western US, TX, CO, FL", rateRange:"10.00–13.00%", term:"6–24 months", amort:"Interest only", contact:"broadmark.com/contact", phone:"(206) 728-2600", website:"broadmark.com", specialty:"Short-term bridge and construction. Western US focus. Fast close." },
+  { id:37, name:"Lima One Capital", type:"Bridge", logo:"⚡", minLoan:75000, maxLoan:20000000, maxLTV:75, minDSCR:1.00, propTypes:["Multifamily","Single-Family Rental","Mixed-Use"], markets:"Nationwide (40+ states)", rateRange:"9.50–13.50%", term:"6–24 months", amort:"Interest only", contact:"limaone.com/contact", phone:"(800) 390-4212", website:"limaone.com", specialty:"Rental portfolio, fix-and-flip, new construction. Fast underwriting." },
+  { id:38, name:"RCN Capital", type:"Bridge", logo:"⚡", minLoan:50000, maxLoan:5000000, maxLTV:85, minDSCR:1.00, propTypes:["Multifamily","Single-Family Rental","Mixed-Use"], markets:"Nationwide (44 states)", rateRange:"9.00–12.50%", term:"12–24 months", amort:"Interest only", contact:"rcncapital.com/contact-us", phone:"(860) 432-5858", website:"rcncapital.com", specialty:"Fix-and-flip, rental, new construction. Competitive rates. Fast funding." },
+  { id:39, name:"Kiavi (formerly LendingHome)", type:"Bridge", logo:"⚡", minLoan:100000, maxLoan:3000000, maxLTV:85, minDSCR:1.00, propTypes:["Single-Family Rental","Multifamily"], markets:"Nationwide (32 states)", rateRange:"9.00–13.00%", term:"12–24 months", amort:"Interest only", contact:"kiavi.com/contact", phone:"(888) 508-4212", website:"kiavi.com", specialty:"Tech-driven bridge lender. Fast approval. Rental and fix-and-flip." },
+  { id:40, name:"CoreVest Finance", type:"Bridge", logo:"⚡", minLoan:500000, maxLoan:100000000, maxLTV:75, minDSCR:1.20, propTypes:["Multifamily","Single-Family Rental","Mobile Home Park","Self-Storage"], markets:"Nationwide", rateRange:"7.50–10.50%", term:"1–5yr", amort:"30yr/IO", contact:"corevestfinance.com/contact", phone:"(888) 585-5636", website:"corevestfinance.com", specialty:"Rental portfolio aggregator. SFR, small MF, BTR communities." },
+
+  // ─── SBA LENDERS ───
+  { id:41, name:"Live Oak Bank (SBA)", type:"SBA Lender", logo:"🌿", minLoan:150000, maxLoan:5000000, maxLTV:90, minDSCR:1.15, propTypes:["Office","Retail","Industrial","Hotel","Mixed-Use","Self-Storage"], markets:"Nationwide", rateRange:"Prime+2.25–2.75%", term:"10–25yr", amort:"25yr", contact:"liveoakbank.com/contact", phone:"(910) 202-8011", website:"liveoakbank.com", specialty:"Top SBA 7(a) lender. Owner-occupied CRE up to 90% LTV. No balloon." },
+  { id:42, name:"Celtic Bank (SBA)", type:"SBA Lender", logo:"🌿", minLoan:250000, maxLoan:5000000, maxLTV:90, minDSCR:1.15, propTypes:["Office","Retail","Industrial","Hotel","Mixed-Use","Self-Storage"], markets:"Nationwide", rateRange:"Prime+2.25–2.75%", term:"10–25yr", amort:"25yr", contact:"celticbank.com/business/sba-loans", phone:"(877) 212-6228", website:"celticbank.com", specialty:"SBA 7(a) and 504 nationwide. Preferred lender status. Owner-occupied CRE." },
+  { id:43, name:"Harvest Small Business Finance (SBA 504)", type:"SBA Lender", logo:"🌿", minLoan:500000, maxLoan:20000000, maxLTV:90, minDSCR:1.15, propTypes:["Office","Retail","Industrial","Mixed-Use","Hotel"], markets:"Nationwide", rateRange:"6.00–7.50%", term:"10–25yr", amort:"25yr", contact:"harvestsbf.com/contact", phone:"(888) 975-2922", website:"harvestsbf.com", specialty:"SBA 504 CDC. Long-term fixed rate. Owner-occupied CRE up to 90% LTV." },
+
+  // ─── CREDIT UNIONS ───
+  { id:44, name:"Alaska USA Federal Credit Union", type:"Credit Union", logo:"✨", minLoan:100000, maxLoan:15000000, maxLTV:80, minDSCR:1.20, propTypes:["Multifamily","Office","Retail","Industrial","Mixed-Use"], markets:"AK, WA, CA, AZ", rateRange:"6.00–7.50%", term:"5,7,10yr", amort:"20–25yr", contact:"alaskausa.org/business/loans", phone:"(907) 563-4567", website:"alaskausa.org", specialty:"Alaska's largest credit union. CRE and business loans. Strong Alaska market knowledge." },
+  { id:45, name:"Navy Federal Credit Union (Business)", type:"Credit Union", logo:"✨", minLoan:250000, maxLoan:10000000, maxLTV:80, minDSCR:1.20, propTypes:["Office","Retail","Industrial","Mixed-Use","Multifamily"], markets:"Nationwide (military-affiliated)", rateRange:"6.00–7.75%", term:"5,7,10yr", amort:"20–25yr", contact:"navyfederal.org/business/loans/commercial-real-estate", phone:"(888) 842-6328", website:"navyfederal.org", specialty:"Military-community focused. Owner-occupied CRE. Nationwide access." },
+  { id:46, name:"Northrim Bank (Alaska)", type:"Community Bank", logo:"🏔", minLoan:100000, maxLoan:20000000, maxLTV:80, minDSCR:1.20, propTypes:["Multifamily","Office","Retail","Industrial","Mixed-Use","Hotel"], markets:"Alaska", rateRange:"6.25–7.75%", term:"5,7,10yr", amort:"20–25yr", contact:"northrim.com/business/commercial-real-estate-loans", phone:"(907) 562-0062", website:"northrim.com", specialty:"Alaska's community bank. Deep statewide relationships. CRE across all AK markets." },
+  { id:47, name:"First National Bank Alaska", type:"Community Bank", logo:"🏔", minLoan:100000, maxLoan:25000000, maxLTV:80, minDSCR:1.20, propTypes:["Multifamily","Office","Retail","Industrial","Mixed-Use","Hotel","Construction"], markets:"Alaska", rateRange:"6.25–7.75%", term:"5,7,10yr", amort:"20–25yr", contact:"fnbalaska.com/business/loans", phone:"(907) 777-4362", website:"fnbalaska.com", specialty:"Alaska's oldest bank. Full CRE platform. Construction, permanent, bridge." },
+
+  // ─── REGIONAL BANKS ───
+  { id:48, name:"Pacific Premier Bank", type:"Regional Bank", logo:"🏦", minLoan:500000, maxLoan:50000000, maxLTV:75, minDSCR:1.25, propTypes:["Multifamily","Office","Retail","Industrial","Mixed-Use","Self-Storage"], markets:"CA, WA, OR, AZ, NV, CO", rateRange:"6.25–7.75%", term:"5,7,10yr", amort:"25yr", contact:"pacificpremierbank.com/business/commercial-real-estate", phone:"(855) 800-4722", website:"pacificpremierbank.com", specialty:"West Coast regional. Full CRE spectrum. Strong California multifamily book." },
+  { id:49, name:"Western Alliance Bank", type:"Regional Bank", logo:"🏦", minLoan:1000000, maxLoan:100000000, maxLTV:75, minDSCR:1.25, propTypes:["Multifamily","Office","Retail","Industrial","Hotel","Mixed-Use"], markets:"AZ, CA, CO, NV, TX, WA, OR", rateRange:"6.25–7.75%", term:"3,5,7,10yr", amort:"25–30yr", contact:"westernalliancebancorporation.com/commercial-banking/real-estate", phone:"(602) 389-3500", website:"westernalliancebancorporation.com", specialty:"Sun Belt specialist. Construction and perm. Strong hospitality and MF verticals." },
+  { id:50, name:"Glacier Bancorp", type:"Regional Bank", logo:"🏔", minLoan:100000, maxLoan:30000000, maxLTV:80, minDSCR:1.20, propTypes:["Multifamily","Office","Retail","Industrial","Mixed-Use","Hotel"], markets:"MT, ID, WY, CO, UT, WA, AK, AZ, NV", rateRange:"6.25–7.75%", term:"5,7,10yr", amort:"20–25yr", contact:"glacierbancorp.com/business-banking/commercial-real-estate", phone:"(406) 756-4200", website:"glacierbancorp.com", specialty:"Mountain West regional. Deep community relationships. Alaska and Northwest focus." },
+  { id:51, name:"Columbia Bank (Pacific Northwest)", type:"Regional Bank", logo:"🏦", minLoan:250000, maxLoan:50000000, maxLTV:75, minDSCR:1.25, propTypes:["Multifamily","Office","Retail","Industrial","Mixed-Use","Hotel","Self-Storage"], markets:"WA, OR, CA, ID", rateRange:"6.25–7.75%", term:"5,7,10yr", amort:"25yr", contact:"columbiabank.com/business/loans/commercial-real-estate", phone:"(877) 272-3678", website:"columbiabank.com", specialty:"Pacific NW specialist. Construction and perm. Strong WA/OR multifamily." },
+  { id:52, name:"HomeStreet Bank", type:"Regional Bank", logo:"🏦", minLoan:500000, maxLoan:75000000, maxLTV:75, minDSCR:1.25, propTypes:["Multifamily","Office","Retail","Industrial","Mixed-Use","Hotel"], markets:"WA, OR, CA, HI, ID, MT, AK", rateRange:"6.25–7.75%", term:"3,5,7,10yr", amort:"25–30yr", contact:"homestreet.com/commercial-real-estate", phone:"(800) 719-8080", website:"homestreet.com", specialty:"Pacific NW/West Coast. Agency multifamily + balance sheet. Hawaii and Alaska deals." },
 ];
 
 const CAP_RATES = [
@@ -140,21 +197,27 @@ function calcAPEXScore({capRate,dscr,ltv,propType,purpose}) {
   return{score:Math.round(score),grade,factors};
 }
 
-function matchLenders({propType,loanAmt,ltv,dscr}) {
+function matchLenders({propType,loanAmt,ltv,dscr,state,purpose}) {
   const loan=parseFloat(loanAmt)||0,ltvN=parseFloat(ltv)||0,dscrN=parseFloat(dscr)||1.0;
   return LENDERS.map(l=>{
     let score=0;const reasons=[],flags=[];
     if(l.propTypes.includes(propType)){score+=30;reasons.push("Property type match");}
     else flags.push(`Does not lend on ${propType}`);
     if(loan>=l.minLoan&&loan<=l.maxLoan){score+=25;reasons.push("Loan amount in range");}
-    else if(loan<l.minLoan)flags.push(`Min loan: $${(l.minLoan/1e6).toFixed(1)}M`);
+    else if(loan<l.minLoan)flags.push(`Min loan: $${l.minLoan>=1000000?(l.minLoan/1e6).toFixed(1)+'M':(l.minLoan/1000).toFixed(0)+'K'}`);
     else flags.push(`Max loan: $${(l.maxLoan/1e6).toFixed(0)}M`);
-    if(ltvN<=l.maxLTV){score+=25;reasons.push(`LTV within ${l.maxLTV}% max`);}
+    if(ltvN<=l.maxLTV){score+=20;reasons.push(`LTV within ${l.maxLTV}% max`);}
     else flags.push(`LTV exceeds their ${l.maxLTV}% max`);
-    if(dscrN>=l.minDSCR){score+=20;reasons.push(`DSCR above ${l.minDSCR}x floor`);}
+    if(dscrN>=l.minDSCR){score+=15;reasons.push(`DSCR above ${l.minDSCR}x floor`);}
     else flags.push(`DSCR below ${l.minDSCR}x minimum`);
-    if(l.markets==="Nationwide")score+=5;
-    return{...l,matchScore:Math.min(score,100),reasons,flags,eligible:score>=60};
+    const mkt=l.markets.toLowerCase();
+    if(mkt.includes("nationwide")){score+=10;reasons.push("Lends nationwide");}
+    else if(state&&mkt.includes(state.toLowerCase())){score+=10;reasons.push(`Lends in ${state}`);}
+    else if(state){flags.push(`May not lend in ${state} — verify`);}
+    if(purpose&&(l.type==="Bridge"||l.type==="Debt Fund")&&(purpose==="Bridge/Value-Add"||purpose==="Construction")){score+=5;reasons.push("Deal type match");}
+    if(purpose&&(l.type==="Life Company"||l.type==="National Bank")&&(purpose==="Acquisition"||purpose==="Refinance")){score+=5;reasons.push("Deal type match");}
+    if(l.type==="Agency/GSE"&&propType==="Multifamily"){score+=5;reasons.push("Agency MF specialist");}
+    return{...l,matchScore:Math.min(score,100),reasons,flags,eligible:score>=55};
   }).sort((a,b)=>b.matchScore-a.matchScore);
 }
 
@@ -1419,39 +1482,91 @@ function SensMatrix() {
 }
 
 /* ─── LENDER ENGINE ─── */
+const LENDER_TYPES=["All","Agency/GSE","Life Company","National Bank","CMBS","Debt Fund","Bridge","SBA Lender","Credit Union","Regional Bank","Community Bank"];
+const US_STATES=["Nationwide","AK","AL","AR","AZ","CA","CO","CT","DC","DE","FL","GA","HI","IA","ID","IL","IN","KS","KY","LA","MA","MD","ME","MI","MN","MO","MS","MT","NC","ND","NE","NH","NJ","NM","NV","NY","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VA","VT","WA","WI","WV","WY"];
+
 function LenderEngine() {
-  const [deal,setDeal]=useState({propType:"Multifamily",loanAmt:"1750000",ltv:"70",dscr:"1.35",purpose:"Acquisition"});
+  const [deal,setDeal]=useState({propType:"Multifamily",loanAmt:"3500000",ltv:"70",dscr:"1.35",purpose:"Acquisition",state:"Nationwide"});
   const [searched,setSearched]=useState(false);
-  const [filter,setFilter]=useState("all");
+  const [typeFilter,setTypeFilter]=useState("All");
   const [query,setQuery]=useState("");
+  const [showEligible,setShowEligible]=useState(false);
+  const [saved,setSaved]=useState([]);
+  const [exportMsg,setExportMsg]=useState("");
   const df=k=>v=>setDeal(p=>({...p,[k]:v}));
+
   const matches=useMemo(()=>searched?matchLenders(deal):[],[searched,deal]);
-  const filtered=matches.filter(l=>{if(filter!=="all"&&l.type!==filter)return false;if(query&&!l.name.toLowerCase().includes(query.toLowerCase()))return false;return true;});
-  const TYPES=["all","National Bank","Debt Fund","Life Company","CMBS","Bridge","Credit Union","Community Bank"];
+  const filtered=useMemo(()=>matches.filter(l=>{
+    if(typeFilter!=="All"&&l.type!==typeFilter)return false;
+    if(showEligible&&!l.eligible)return false;
+    if(query&&!l.name.toLowerCase().includes(query.toLowerCase())&&!l.specialty.toLowerCase().includes(query.toLowerCase()))return false;
+    return true;
+  }),[matches,typeFilter,showEligible,query]);
+
+  const eligibleCount=matches.filter(l=>l.eligible).length;
+
+  const toggleSave=(id)=>setSaved(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
+
+  const exportCSV=()=>{
+    const rows=filtered.map(l=>[l.name,l.type,l.matchScore,l.rateRange,l.term,l.amort,`$${(l.minLoan/1e6).toFixed(1)}M–$${(l.maxLoan/1e6).toFixed(0)}M`,l.maxLTV+'%',l.minDSCR+'x',l.markets,l.phone,l.contact,l.website,l.specialty].join(","));
+    const csv="Lender,Type,Match Score,Rate,Term,Amort,Loan Range,Max LTV,Min DSCR,Markets,Phone,Contact,Website,Specialty\n"+rows.join("\n");
+    navigator.clipboard.writeText(csv).then(()=>{setExportMsg("✓ Copied to clipboard");setTimeout(()=>setExportMsg(""),2500);});
+  };
+
   return(
-    <div className="au" style={{maxWidth:1080}}>
-      <h2 style={H2}>Lender Intelligence Engine</h2>
-      <p style={{...Sub,marginBottom:22}}>Match your deal against 12 active CRE lenders. Ranked by fit score.</p>
-      <div style={{display:"grid",gridTemplateColumns:"280px 1fr",gap:18}}>
-        <div style={P}>
+    <div className="au" style={{maxWidth:1120}}>
+      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:12,marginBottom:6}}>
+        <div><h2 style={H2}>Lender Intelligence Engine</h2><p style={{...Sub,marginBottom:0}}>52 verified CRE lenders — match your deal, generate your intro, make contact.</p></div>
+        {searched&&<div style={{display:"flex",gap:8,alignItems:"center"}}>
+          {exportMsg?<span style={{fontSize:11,color:C.success}}>{exportMsg}</span>:
+          <button onClick={exportCSV} style={{...btnOutline,padding:"6px 14px",fontSize:11,display:"flex",alignItems:"center",gap:5}}><Download size={11}/>Export CSV</button>}
+        </div>}
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"260px 1fr",gap:18,marginTop:18}}>
+        {/* ─── DEAL PROFILE PANEL ─── */}
+        <div style={{...P,position:"sticky",top:0,maxHeight:"calc(100vh - 120px)",overflowY:"auto"}}>
           <SL>Deal Profile</SL>
-          <div style={{marginBottom:11}}><FL l="Property Type"/><Sel val={deal.propType} set={df("propType")} opts={PROP_TYPES}/></div>
-          <div style={{marginBottom:11}}><FL l="Loan Amount ($)"/><Inp val={deal.loanAmt} set={df("loanAmt")} mono/></div>
-          <div style={{marginBottom:11}}><FL l="LTV (%)"/><Inp val={deal.ltv} set={df("ltv")} mono/></div>
-          <div style={{marginBottom:11}}><FL l="DSCR"/><Inp val={deal.dscr} set={df("dscr")} mono/></div>
-          <div style={{marginBottom:18}}><FL l="Loan Purpose"/><Sel val={deal.purpose} set={df("purpose")} opts={LOAN_PURPOSES}/></div>
-          <button onClick={()=>setSearched(true)} style={{...btnGold,width:"100%",padding:"10px 0",display:"flex",alignItems:"center",justifyContent:"center",gap:7,fontSize:13}}><Search size={14}/>Match Lenders</button>
-          {searched&&<p style={{fontSize:10,color:C.success,textAlign:"center",marginTop:8}}>✓ {filtered.filter(l=>l.eligible).length} eligible lenders</p>}
+          <div style={{marginBottom:10}}><FL l="Property Type"/><Sel val={deal.propType} set={df("propType")} opts={PROP_TYPES}/></div>
+          <div style={{marginBottom:10}}><FL l="Loan Amount ($)"/><Inp val={deal.loanAmt} set={df("loanAmt")} mono/></div>
+          <div style={{marginBottom:10}}><FL l="LTV (%)"/><Inp val={deal.ltv} set={df("ltv")} mono/></div>
+          <div style={{marginBottom:10}}><FL l="DSCR"/><Inp val={deal.dscr} set={df("dscr")} mono/></div>
+          <div style={{marginBottom:10}}><FL l="Loan Purpose"/><Sel val={deal.purpose} set={df("purpose")} opts={LOAN_PURPOSES}/></div>
+          <div style={{marginBottom:18}}>
+            <FL l="State / Market"/>
+            <select value={deal.state} onChange={e=>df("state")(e.target.value)} style={{...IS,width:"100%"}}>
+              {US_STATES.map(s=><option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <button onClick={()=>setSearched(true)} style={{...btnGold,width:"100%",padding:"11px 0",display:"flex",alignItems:"center",justifyContent:"center",gap:7,fontSize:13,marginBottom:8}}><Search size={14}/>Match Lenders</button>
+          {searched&&<div style={{background:C.card,borderRadius:8,padding:"10px 12px",marginTop:4}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontSize:11,color:C.muted}}>Total matched</span><span style={{fontSize:12,color:C.text,fontFamily:"'DM Mono',monospace"}}>{matches.length}</span></div>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontSize:11,color:C.muted}}>Eligible</span><span style={{fontSize:12,color:C.success,fontFamily:"'DM Mono',monospace"}}>{eligibleCount}</span></div>
+            <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:11,color:C.muted}}>Saved</span><span style={{fontSize:12,color:C.gold,fontFamily:"'DM Mono',monospace"}}>{saved.length}</span></div>
+          </div>}
         </div>
+
+        {/* ─── RESULTS PANEL ─── */}
         <div>
-          {!searched?<div style={{...P,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:380,opacity:.5}}><Database size={36} color={C.muted} style={{marginBottom:10}}/><p style={{color:C.muted,fontSize:13}}>Enter deal profile and match</p></div>:(
+          {!searched?(
+            <div style={{...P,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:420,opacity:.5}}>
+              <Database size={40} color={C.muted} style={{marginBottom:12}}/>
+              <p style={{color:C.muted,fontSize:14,fontWeight:500}}>Enter deal profile and click Match</p>
+              <p style={{color:C.dim,fontSize:12,marginTop:4}}>52 verified lenders ranked by fit score</p>
+            </div>
+          ):(
             <>
-              <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
-                <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search lenders..." style={{flex:1,minWidth:160,...IS}}/>
-                {TYPES.map(t=><button key={t} onClick={()=>setFilter(t)} style={{padding:"5px 10px",borderRadius:6,border:`1px solid ${filter===t?C.borderGold:C.border}`,background:filter===t?`${C.goldMuted}22`:"transparent",color:filter===t?C.gold:C.muted,fontSize:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"}}>{t==="all"?"All":t}</button>)}
+              {/* Filters Bar */}
+              <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
+                <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search lenders, specialties…" style={{flex:1,minWidth:180,...IS,fontSize:12}}/>
+                <button onClick={()=>setShowEligible(s=>!s)} style={{padding:"5px 12px",borderRadius:6,border:`1px solid ${showEligible?C.success:C.border}`,background:showEligible?`${C.success}18`:"transparent",color:showEligible?C.success:C.muted,fontSize:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"}}>Eligible Only</button>
+              </div>
+              <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
+                {LENDER_TYPES.map(t=><button key={t} onClick={()=>setTypeFilter(t)} style={{padding:"4px 10px",borderRadius:5,border:`1px solid ${typeFilter===t?C.borderGold:C.border}`,background:typeFilter===t?`${C.goldMuted}22`:"transparent",color:typeFilter===t?C.gold:C.dim,fontSize:9,cursor:"pointer",fontFamily:"'DM Mono',monospace",letterSpacing:".05em",whiteSpace:"nowrap"}}>{t.toUpperCase()}</button>)}
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                {filtered.map((l,i)=><LCard key={l.id} l={l} rank={i+1}/>)}
+                {filtered.length===0?<div style={{...P,textAlign:"center",padding:32,color:C.muted,fontSize:13}}>No lenders match current filters.</div>
+                :filtered.map((l,i)=><LCard key={l.id} l={l} rank={i+1} deal={deal} saved={saved.includes(l.id)} onSave={()=>toggleSave(l.id)}/>)}
               </div>
             </>
           )}
@@ -1461,29 +1576,130 @@ function LenderEngine() {
   );
 }
 
-function LCard({l,rank}) {
+function LCard({l,rank,deal,saved,onSave}) {
   const [exp,setExp]=useState(false);
+  const [aiEmail,setAiEmail]=useState("");
+  const [aiLoading,setAiLoading]=useState(false);
   const sc=l.matchScore>=80?C.success:l.matchScore>=60?C.goldBright:l.matchScore>=40?C.warn:C.muted;
-  const TC={"National Bank":C.blue,"Debt Fund":C.purple,"Life Company":C.gold,"CMBS":C.blue,"Bridge":C.danger,"Credit Union":C.success,"Community Bank":C.teal};
+  const TC={"Agency/GSE":C.teal,"National Bank":C.blue,"Debt Fund":C.purple,"Life Company":C.gold,"CMBS":C.blue,"Bridge":C.danger,"Credit Union":C.success,"Regional Bank":C.blue,"Community Bank":C.teal,"SBA Lender":C.rose};
+  const fmtLoan=n=>n>=1000000?`$${(n/1e6).toFixed(1)}M`:`$${(n/1000).toFixed(0)}K`;
+
+  const genEmail=async()=>{
+    setAiLoading(true);setAiEmail("");
+    try{
+      const prompt=`You are a senior CRE capital advisor writing a professional cold outreach email to a lender on behalf of a borrower/broker.
+
+Lender: ${l.name} (${l.type})
+Lender specialty: ${l.specialty}
+Lender markets: ${l.markets}
+
+Deal details:
+- Property type: ${deal.propType}
+- Loan amount: $${Number(deal.loanAmt).toLocaleString()}
+- LTV: ${deal.ltv}%
+- DSCR: ${deal.dscr}x
+- Purpose: ${deal.purpose}
+- Market: ${deal.state||"Nationwide"}
+
+Write a concise, professional 3-paragraph intro email (subject line + body). Paragraph 1: brief intro and deal summary. Paragraph 2: why this lender is the right fit for this deal. Paragraph 3: clear call to action. No fluff, no filler. Sound like a CRE professional, not a salesperson. Keep total length under 200 words.`;
+
+      const res=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({system:"You are a CRE capital markets professional writing lender outreach emails.",prompt})});
+      const data=await res.json();
+      setAiEmail(data.result||data.content||"");
+    }catch{setAiEmail("Error generating email. Please try again.");}
+    setAiLoading(false);
+  };
+
+  const copyEmail=()=>{navigator.clipboard.writeText(aiEmail);};
+
   return(
-    <div style={{background:C.surface,border:`1px solid ${l.eligible?C.borderBlue:C.border}`,borderRadius:12,overflow:"hidden"}}>
-      <div onClick={()=>setExp(s=>!s)} style={{padding:"14px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
-        <div style={{width:26,height:26,background:C.card,borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>{l.logo}</div>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:2}}><span style={{fontSize:13,fontWeight:500,color:C.white}}>{l.name}</span><span style={{fontSize:8,padding:"2px 6px",borderRadius:3,background:`${TC[l.type]||C.muted}18`,color:TC[l.type]||C.muted,fontFamily:"'DM Mono',monospace"}}>{l.type}</span>{!l.eligible&&<span style={{fontSize:8,padding:"2px 6px",borderRadius:3,background:C.warnBg,color:C.warn}}>INELIGIBLE</span>}</div>
-          <p style={{fontSize:11,color:C.muted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.specialty}</p>
+    <div style={{background:C.surface,border:`1px solid ${l.eligible?C.borderGold:C.border}`,borderRadius:12,overflow:"hidden",transition:"border-color .2s"}}>
+      {/* Header Row */}
+      <div style={{padding:"13px 16px",display:"flex",alignItems:"center",gap:12}}>
+        <div onClick={()=>setExp(s=>!s)} style={{display:"flex",alignItems:"center",gap:12,flex:1,cursor:"pointer",minWidth:0}}>
+          <div style={{width:28,height:28,background:C.card,borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}>{l.logo}</div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:2}}>
+              <span style={{fontSize:13,fontWeight:600,color:C.white}}>{l.name}</span>
+              <span style={{fontSize:8,padding:"2px 6px",borderRadius:3,background:`${TC[l.type]||C.muted}22`,color:TC[l.type]||C.muted,fontFamily:"'DM Mono',monospace",letterSpacing:".05em"}}>{l.type}</span>
+              {!l.eligible&&<span style={{fontSize:8,padding:"2px 5px",borderRadius:3,background:C.warnBg,color:C.warn}}>INELIGIBLE</span>}
+            </div>
+            <p style={{fontSize:11,color:C.muted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.specialty}</p>
+          </div>
+          <div style={{textAlign:"center",flexShrink:0,marginRight:4}}>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:700,color:sc,lineHeight:1}}>{l.matchScore}</div>
+            <div style={{fontSize:8,color:C.muted,fontFamily:"'DM Mono',monospace"}}>MATCH</div>
+          </div>
+          <ChevronDown size={13} color={C.muted} style={{transform:exp?"rotate(180deg)":"none",transition:"transform .2s",flexShrink:0}}/>
         </div>
-        <div style={{textAlign:"center",flexShrink:0}}><div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:700,color:sc,lineHeight:1}}>{l.matchScore}</div><div style={{fontSize:8,color:C.muted,fontFamily:"'DM Mono',monospace"}}>MATCH</div></div>
-        <ChevronDown size={13} color={C.muted} style={{transform:exp?"rotate(180deg)":"none",transition:"transform .2s"}}/>
+        {/* Quick action buttons */}
+        <div style={{display:"flex",gap:6,flexShrink:0}}>
+          <button onClick={onSave} title={saved?"Unsave":"Save"} style={{width:28,height:28,borderRadius:6,border:`1px solid ${saved?C.borderGold:C.border}`,background:saved?`${C.goldMuted}22`:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:saved?C.gold:C.dim,fontSize:14}}>
+            {saved?"★":"☆"}
+          </button>
+          <button onClick={()=>window.open(`https://${l.website}`,"_blank")} title="Open lender website" style={{width:28,height:28,borderRadius:6,border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.muted}}>
+            <ExternalLink size={11}/>
+          </button>
+        </div>
       </div>
-      {exp&&<div className="ai" style={{borderTop:`1px solid ${C.border}`,padding:"14px 16px"}}>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:14,marginBottom:14}}>
-          <div><div style={{fontSize:9,color:C.muted,marginBottom:6}}>Loan Parameters</div>{[["Range",`$${(l.minLoan/1e6).toFixed(1)}M – $${(l.maxLoan/1e6).toFixed(0)}M`],["Max LTV",`${l.maxLTV}%`],["Min DSCR",`${l.minDSCR}x`],["Rate",l.rateRange],["Term",l.term]].map(([k,v])=><div key={k} style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontSize:11,color:C.muted}}>{k}</span><span style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:C.text}}>{v}</span></div>)}</div>
-          <div><div style={{fontSize:9,color:C.muted,marginBottom:6}}>Match</div>{l.reasons.map((r,i)=><div key={i} style={{display:"flex",gap:5,marginBottom:4}}><Check size={10} color={C.success}/><span style={{fontSize:11,color:C.success}}>{r}</span></div>)}{l.flags.map((f,i)=><div key={i} style={{display:"flex",gap:5,marginBottom:4}}><AlertCircle size={10} color={C.warn}/><span style={{fontSize:11,color:C.warn}}>{f}</span></div>)}</div>
+
+      {/* Expanded Detail */}
+      {exp&&<div style={{borderTop:`1px solid ${C.border}`,padding:"16px 16px 14px"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:16,marginBottom:16}}>
+          {/* Loan Parameters */}
+          <div>
+            <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:8}}>LOAN PARAMETERS</div>
+            {[["Loan Range",`${fmtLoan(l.minLoan)} – ${fmtLoan(l.maxLoan)}`],["Max LTV",`${l.maxLTV}%`],["Min DSCR",`${l.minDSCR}x`],["Rate Range",l.rateRange],["Term",l.term],["Amortization",l.amort],["Markets",l.markets]].map(([k,v])=>(
+              <div key={k} style={{display:"flex",justifyContent:"space-between",marginBottom:5,gap:8}}>
+                <span style={{fontSize:11,color:C.muted,flexShrink:0}}>{k}</span>
+                <span style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:C.text,textAlign:"right"}}>{v}</span>
+              </div>
+            ))}
+          </div>
+          {/* Match Analysis */}
+          <div>
+            <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:8}}>MATCH ANALYSIS</div>
+            {l.reasons.map((r,i)=><div key={i} style={{display:"flex",gap:6,marginBottom:5}}><Check size={10} color={C.success} style={{marginTop:2,flexShrink:0}}/><span style={{fontSize:11,color:C.success}}>{r}</span></div>)}
+            {l.flags.map((f,i)=><div key={i} style={{display:"flex",gap:6,marginBottom:5}}><AlertCircle size={10} color={C.warn} style={{marginTop:2,flexShrink:0}}/><span style={{fontSize:11,color:C.warn}}>{f}</span></div>)}
+            {l.notes&&<div style={{marginTop:8,padding:"8px 10px",background:C.card,borderRadius:6,fontSize:11,color:C.dim,lineHeight:1.5}}>{l.notes}</div>}
+          </div>
         </div>
-        <div style={{background:C.card,borderRadius:8,padding:"10px 12px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
-          <div style={{display:"flex",gap:16}}><div style={{display:"flex",alignItems:"center",gap:5}}><Mail size={11} color={C.muted}/><span style={{fontSize:11,color:C.muted}}>{l.contact}</span></div><div style={{display:"flex",alignItems:"center",gap:5}}><Phone size={11} color={C.muted}/><span style={{fontSize:11,color:C.muted}}>{l.phone}</span></div></div>
-          <button style={{...btnGold,padding:"5px 12px",fontSize:11,display:"flex",alignItems:"center",gap:5}}><ExternalLink size={10}/>Contact</button>
+
+        {/* Contact Bar */}
+        <div style={{background:C.card,borderRadius:8,padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10,marginBottom:14}}>
+          <div style={{display:"flex",gap:18,flexWrap:"wrap"}}>
+            <div style={{display:"flex",alignItems:"center",gap:5}}><Phone size={11} color={C.muted}/><span style={{fontSize:11,color:C.muted}}>{l.phone}</span></div>
+            <div style={{display:"flex",alignItems:"center",gap:5}}><Mail size={11} color={C.muted}/><span style={{fontSize:11,color:C.muted}}>{l.contact}</span></div>
+            <div style={{display:"flex",alignItems:"center",gap:5}}><ExternalLink size={10} color={C.gold}/><a href={`https://${l.website}`} target="_blank" rel="noreferrer" style={{fontSize:11,color:C.gold,textDecoration:"none"}}>{l.website}</a></div>
+          </div>
+          <button onClick={()=>window.open(`https://${l.website}`,"_blank")} style={{...btnGold,padding:"6px 16px",fontSize:11,display:"flex",alignItems:"center",gap:5}}>
+            <ExternalLink size={10}/>Visit Lender
+          </button>
+        </div>
+
+        {/* AI Email Generator */}
+        <div style={{border:`1px solid ${C.borderGold}`,borderRadius:10,overflow:"hidden"}}>
+          <div style={{padding:"10px 14px",background:`${C.goldMuted}11`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{display:"flex",alignItems:"center",gap:7}}>
+              <Brain size={13} color={C.gold}/>
+              <span style={{fontSize:11,fontWeight:600,color:C.gold}}>AI Lender Intro Email</span>
+              <span style={{fontSize:9,color:C.dim}}>— personalized to this deal + lender</span>
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              {aiEmail&&<button onClick={copyEmail} style={{...btnOutline,padding:"4px 10px",fontSize:10,display:"flex",alignItems:"center",gap:4}}><Copy size={9}/>Copy</button>}
+              <button onClick={genEmail} disabled={aiLoading} style={{...btnGold,padding:"5px 14px",fontSize:10,display:"flex",alignItems:"center",gap:5,opacity:aiLoading?.7:1}}>
+                {aiLoading?<><div style={{width:10,height:10,border:`2px solid ${C.bg}55`,borderTopColor:C.bg,borderRadius:"50%",animation:"spin 1s linear infinite"}}/>Generating...</>:<><Zap size={10}/>Generate Email</>}
+              </button>
+            </div>
+          </div>
+          {aiEmail&&(
+            <div style={{padding:"14px 16px",background:C.card}}>
+              <pre style={{fontFamily:"'DM Sans',sans-serif",fontSize:12,color:C.text,whiteSpace:"pre-wrap",lineHeight:1.7,margin:0}}>{aiEmail}</pre>
+            </div>
+          )}
+          {!aiEmail&&!aiLoading&&(
+            <div style={{padding:"12px 16px",fontSize:11,color:C.dim,fontStyle:"italic"}}>Click Generate Email to create a personalized outreach email for this lender based on your deal profile.</div>
+          )}
         </div>
       </div>}
     </div>
