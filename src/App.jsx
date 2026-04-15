@@ -1559,169 +1559,719 @@ function DealPackager() {
 }
 
 /* ─── UNDERWRITING HUB ─── */
+/* ─── UNDERWRITING HELPERS ─── */
+const fmtD=n=>`$${Math.round(n).toLocaleString()}`;
+const fmtP=n=>`${n.toFixed(2)}%`;
+const fmtPx=n=>`${n.toFixed(1)}%`;
+const monthlyPmt=(loan,annRate,amortYrs)=>{const r=annRate/100/12,n=amortYrs*12;return r>0?loan*(r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1):loan/n;};
+const loanBal=(loan,annRate,amortYrs,holdYrs)=>{const r=annRate/100/12,pmt=monthlyPmt(loan,annRate,amortYrs);let bal=loan;for(let m=0;m<holdYrs*12;m++){bal-=(pmt-bal*r);}return Math.max(0,bal);};
+const calcIRR=(cfs)=>{let r=0.1;for(let i=0;i<200;i++){const f=cfs.reduce((s,cf,j)=>s+cf/Math.pow(1+r,j),0);const df=cfs.reduce((s,cf,j)=>j===0?s:s-j*cf/Math.pow(1+r,j+1),0);if(Math.abs(df)<1e-10)break;const nr=r-f/df;if(nr<-0.99)break;r=nr;}return r;};
+const UW_COLORS={excellent:C.success,good:C.goldBright,marginal:C.warn,poor:C.danger};
+const MetricCard=({label,value,sub,color,size=26})=>(
+  <div style={{background:C.card,borderRadius:9,padding:"12px 14px"}}>
+    <div style={{fontSize:9,color:C.muted,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:".06em"}}>{label}</div>
+    <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:size,fontWeight:700,color:color||C.white,lineHeight:1}}>{value}</div>
+    {sub&&<div style={{fontSize:10,color:C.dim,marginTop:4}}>{sub}</div>}
+  </div>
+);
+const Bar=({pct,color,max=100})=>{
+  const w=Math.min(Math.max(pct/max*100,0),100);
+  return<div style={{height:5,background:C.border,borderRadius:3,overflow:"hidden",marginTop:6}}><div style={{height:"100%",width:`${w}%`,background:color,borderRadius:3,transition:"width .4s"}}/></div>;
+};
+const UWInput=({label,value,set,prefix="",suffix=""})=>(
+  <div style={{marginBottom:10}}>
+    <FL l={label}/>
+    <div style={{position:"relative",display:"flex",alignItems:"center"}}>
+      {prefix&&<span style={{position:"absolute",left:10,fontSize:12,color:C.muted,pointerEvents:"none"}}>{prefix}</span>}
+      <input value={value} onChange={e=>set(e.target.value)} style={{...IS,width:"100%",paddingLeft:prefix?22:10,paddingRight:suffix?30:10,fontFamily:"'DM Mono',monospace",fontSize:12}}/>
+      {suffix&&<span style={{position:"absolute",right:10,fontSize:12,color:C.muted,pointerEvents:"none"}}>{suffix}</span>}
+    </div>
+  </div>
+);
+const StatusPill=({text,ok,warn})=>(
+  <span style={{display:"inline-flex",alignItems:"center",gap:4,padding:"3px 10px",borderRadius:100,background:ok?C.successBg:warn?`${C.warn}15`:C.dangerBg,border:`1px solid ${ok?C.successBorder:warn?`${C.warn}40`:C.dangerBorder}`,fontSize:10,color:ok?C.success:warn?C.warn:C.danger}}>
+    {ok?<CheckCircle size={9} color={C.success}/>:warn?<AlertCircle size={9} color={C.warn}/>:<XCircle size={9} color={C.danger}/>}
+    {text}
+  </span>
+);
+
 function UnderwritingHub() {
   const [tab,setTab]=useState("dscr");
-  const TABS=[{id:"dscr",l:"DSCR"},{id:"noi",l:"NOI Analyzer"},{id:"ltv",l:"LTV / LTC"},{id:"irr",l:"IRR & Returns"},{id:"cf",l:"5-Year Projection"},{id:"sens",l:"Sensitivity"}];
+  const TABS=[
+    {id:"dscr",l:"DSCR"},{id:"noi",l:"NOI Analyzer"},{id:"ltv",l:"Leverage"},{id:"sizing",l:"Loan Sizing"},
+    {id:"irr",l:"IRR & Returns"},{id:"cf",l:"5-Yr Projection"},{id:"sens",l:"Sensitivity"},{id:"bridge",l:"Bridge-to-Perm"}
+  ];
   return (
-    <div className="au" style={{maxWidth:1000}}>
+    <div className="au" style={{maxWidth:1040}}>
       <h2 style={H2}>Underwriting Suite</h2>
-      <p style={{...Sub,marginBottom:18}}>6 live calculators for CRE deal analysis. All results update in real time.</p>
-      <div style={{display:"flex",gap:4,background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:4,marginBottom:22,overflowX:"auto"}}>
-        {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"7px 14px",borderRadius:7,border:"none",background:tab===t.id?C.card:"transparent",color:tab===t.id?C.goldBright:C.muted,fontSize:12,fontWeight:tab===t.id?500:400,cursor:"pointer",whiteSpace:"nowrap",fontFamily:"'DM Sans',sans-serif",transition:"all .15s"}}>{t.l}</button>)}
+      <p style={{...Sub,marginBottom:18}}>8 live CRE calculators. All results update in real time as you type.</p>
+      <div style={{display:"flex",gap:4,background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:4,marginBottom:22,overflowX:"auto",flexWrap:"wrap"}}>
+        {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"7px 14px",borderRadius:7,border:"none",background:tab===t.id?C.card:"transparent",color:tab===t.id?C.goldBright:C.muted,fontSize:12,fontWeight:tab===t.id?600:400,cursor:"pointer",whiteSpace:"nowrap",fontFamily:"'DM Sans',sans-serif",transition:"all .15s"}}>{t.l}</button>)}
       </div>
       <div className="ai">
         {tab==="dscr"&&<DSCRCalc/>}
         {tab==="noi"&&<NOICalc/>}
         {tab==="ltv"&&<LTVCalc/>}
+        {tab==="sizing"&&<LoanSizingCalc/>}
         {tab==="irr"&&<IRRCalc/>}
         {tab==="cf"&&<CFProj/>}
         {tab==="sens"&&<SensMatrix/>}
+        {tab==="bridge"&&<BridgeToPerm/>}
       </div>
     </div>
   );
 }
 
 function DSCRCalc() {
-  const [v,sv]=useState({price:"2500000",noi:"175000",ltv:"70",rate:"6.75",amort:"25"});
+  const [v,sv]=useState({price:"2500000",noi:"175000",ltv:"70",rate:"6.75",amort:"25",io:"0"});
   const s=k=>val=>sv(p=>({...p,[k]:val}));
-  const p=parseFloat(v.price)||0,n=parseFloat(v.noi)||0,ltv=parseFloat(v.ltv)/100||0,r=parseFloat(v.rate)/100/12||0,am=parseFloat(v.amort)*12;
-  const loan=p*ltv,mPmt=r>0?loan*(r*Math.pow(1+r,am))/(Math.pow(1+r,am)-1):0,annDebt=mPmt*12;
-  const dscr=annDebt>0?(n/annDebt):0,cap=p>0?(n/p*100):0;
-  const dc=dscr>=1.5?C.success:dscr>=1.25?C.goldBright:dscr>=1.10?C.warn:C.danger;
+  const price=parseFloat(v.price)||0,noi=parseFloat(v.noi)||0,ltvN=parseFloat(v.ltv)/100||0;
+  const loan=price*ltvN,ioYrs=parseInt(v.io)||0;
+  const pmt=ioYrs>0?loan*(parseFloat(v.rate)/100/12):monthlyPmt(loan,parseFloat(v.rate),parseFloat(v.amort));
+  const annDebt=pmt*12,dscr=annDebt>0?noi/annDebt:0,cap=price>0?noi/price*100:0;
+  const equity=price-loan,coc=equity>0?(noi-annDebt)/equity*100:0;
+  const beNOI=annDebt*1.25,beNOI120=annDebt*1.20;
+  const dc=dscr>=1.5?UW_COLORS.excellent:dscr>=1.25?UW_COLORS.good:dscr>=1.10?UW_COLORS.marginal:UW_COLORS.poor;
+  const lenderFloor=dscr>=1.25?"Most lenders — qualifying":dscr>=1.20?"Some lenders — marginal":dscr>=1.10?"Bridge/hard money only":"Below all lender floors";
+  // Stress scenarios
+  const stressRates=[0,50,100,150,200];
   return(
-    <div style={{display:"grid",gridTemplateColumns:"340px 1fr",gap:18}}>
-      <div style={P}>{[["Purchase Price ($)","price"],["Annual NOI ($)","noi"],["LTV (%)","ltv"],["Interest Rate (%)","rate"],["Amortization (yrs)","amort"]].map(([l,k])=><div key={k} style={{marginBottom:11}}><FL l={l}/><Inp val={v[k]} set={s(k)} mono/></div>)}</div>
+    <div>
+      <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:18,marginBottom:18}}>
+        <div style={P}>
+          <SL>Deal Inputs</SL>
+          <UWInput label="Purchase Price" value={v.price} set={s("price")} prefix="$"/>
+          <UWInput label="Annual NOI" value={v.noi} set={s("noi")} prefix="$"/>
+          <UWInput label="LTV" value={v.ltv} set={s("ltv")} suffix="%"/>
+          <UWInput label="Interest Rate" value={v.rate} set={s("rate")} suffix="%"/>
+          <UWInput label="Amortization (yrs)" value={v.amort} set={s("amort")} suffix="yr"/>
+          <UWInput label="Interest-Only Period" value={v.io} set={s("io")} suffix="yr"/>
+          <div style={{background:C.card2,borderRadius:7,padding:"10px 12px",marginTop:8}}>
+            <div style={{fontSize:9,color:C.muted,marginBottom:4,fontFamily:"'DM Mono',monospace"}}>LOAN AMOUNT</div>
+            <div style={{fontFamily:"'DM Mono',monospace",fontSize:15,color:C.goldBright}}>{fmtD(loan)}</div>
+          </div>
+        </div>
+        <div>
+          <div style={{textAlign:"center",padding:"20px 0 18px",background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,marginBottom:14}}>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:88,fontWeight:700,color:dc,lineHeight:1}}>{dscr>0?dscr.toFixed(2):"—"}</div>
+            <div style={{fontSize:12,color:C.muted,marginTop:4,marginBottom:10}}>Debt Service Coverage Ratio</div>
+            {dscr>0&&<StatusPill text={lenderFloor} ok={dscr>=1.25} warn={dscr>=1.10&&dscr<1.25}/>}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:14}}>
+            <MetricCard label="CAP RATE" value={fmtPx(cap)} sub="NOI ÷ Price" color={cap>=6?C.success:cap>=5?C.goldBright:C.warn}/>
+            <MetricCard label="CASH-ON-CASH" value={fmtPx(coc)} sub="After debt service" color={coc>=6?C.success:coc>=4?C.goldBright:C.warn}/>
+            <MetricCard label="ANNUAL DEBT SVC" value={fmtD(annDebt)} sub={`${fmtD(pmt)}/mo`}/>
+          </div>
+          <div style={{...P,marginBottom:0}}>
+            <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:12}}>BREAKEVEN ANALYSIS</div>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:8,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>
+              <span style={{fontSize:12,color:C.muted}}>NOI needed for 1.20x DSCR</span>
+              <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:noi>=beNOI120?C.success:C.danger}}>{fmtD(beNOI120)}/yr</span>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:8,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>
+              <span style={{fontSize:12,color:C.muted}}>NOI needed for 1.25x DSCR</span>
+              <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:noi>=beNOI?C.success:C.danger}}>{fmtD(beNOI)}/yr</span>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between"}}>
+              <span style={{fontSize:12,color:C.muted}}>Current NOI vs 1.25x floor</span>
+              <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:noi>=beNOI?C.success:C.danger}}>
+                {noi>=beNOI?`+${fmtD(noi-beNOI)} surplus`:`${fmtD(beNOI-noi)} shortfall`}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* Rate Stress Test */}
       <div style={P}>
-        <div style={{textAlign:"center",padding:"16px 0 24px"}}>
-          <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:80,fontWeight:700,color:dc,lineHeight:1}}>{dscr>0?dscr.toFixed(2):"—"}</div>
-          <div style={{fontSize:12,color:C.muted,marginTop:4}}>Debt Service Coverage Ratio</div>
-          {dscr>0&&<div style={{marginTop:10,display:"inline-flex",alignItems:"center",gap:6,background:dscr>=1.25?C.successBg:C.warnBg,border:`1px solid ${dscr>=1.25?C.successBorder:C.warnBorder}`,borderRadius:100,padding:"4px 12px"}}>
-            {dscr>=1.25?<CheckCircle size={11} color={C.success}/>:<AlertCircle size={11} color={C.warn}/>}
-            <span style={{fontSize:11,color:dscr>=1.25?C.success:C.warn}}>{dscr>=1.5?"Excellent":dscr>=1.25?"Acceptable — meets 1.25x":dscr>=1.1?"Marginal":"Below floor — restructure needed"}</span>
-          </div>}
+        <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:14}}>RATE STRESS TEST — DSCR AT HIGHER RATES</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8}}>
+          {stressRates.map(bps=>{
+            const sRate=parseFloat(v.rate)+(bps/100);
+            const sPmt=monthlyPmt(loan,sRate,parseFloat(v.amort));
+            const sDSCR=annDebt>0?noi/(sPmt*12):0;
+            const sc=sDSCR>=1.25?C.success:sDSCR>=1.10?C.warn:C.danger;
+            return(
+              <div key={bps} style={{background:C.card,borderRadius:9,padding:"11px 12px",textAlign:"center"}}>
+                <div style={{fontSize:9,color:C.muted,marginBottom:5}}>+{bps}bps</div>
+                <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,fontWeight:700,color:sc}}>{sDSCR.toFixed(2)}x</div>
+                <div style={{fontSize:9,color:C.dim,marginTop:2}}>{fmtPx(sRate)}</div>
+              </div>
+            );
+          })}
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
-          {[["Loan Amount",`$${Math.round(loan).toLocaleString()}`,true],["Ann. Debt Svc",`$${Math.round(annDebt).toLocaleString()}`,true],["Cap Rate",`${cap.toFixed(2)}%`,cap>5],["Monthly Pmt",`$${Math.round(mPmt).toLocaleString()}`,true],["NOI Surplus",`$${Math.round(n-annDebt).toLocaleString()}`,n>annDebt],["LTV",`${v.ltv}%`,parseFloat(v.ltv)<=75]].map(([l,val,ok],i)=>(
-            <div key={i} style={{background:C.card2,borderRadius:7,padding:"10px 12px"}}><div style={{fontSize:9,color:C.muted,marginBottom:3}}>{l}</div><div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:ok?C.success:C.danger}}>{val}</div></div>
-          ))}
-        </div>
-        <div style={{marginTop:14,background:C.card2,borderRadius:8,padding:12}}><div style={{fontSize:10,color:C.muted,marginBottom:4}}>Breakeven NOI for 1.25x DSCR</div><div style={{fontFamily:"'DM Mono',monospace",fontSize:15,color:C.goldBright}}>${Math.round(annDebt*1.25).toLocaleString()}/yr</div>{n>0&&<div style={{fontSize:10,color:n>=annDebt*1.25?C.success:C.danger,marginTop:3}}>Current NOI is ${Math.abs(Math.round(n-annDebt*1.25)).toLocaleString()} {n>=annDebt*1.25?"above":"below"} breakeven</div>}</div>
       </div>
     </div>
   );
 }
 
 function NOICalc() {
-  const [inc,si]=useState({gross:"240000",other:"12000",vac:"5"});
-  const [exp,se]=useState({taxes:"18000",insurance:"8000",mgmt:"9600",maint:"12000",utils:"6000",reserves:"4800",other2:"3600"});
-  const gross=parseFloat(inc.gross)||0,oth=parseFloat(inc.other)||0,vacL=gross*(parseFloat(inc.vac)/100||0);
-  const egi=gross-vacL+oth,totalExp=Object.values(exp).reduce((s,v)=>s+(parseFloat(v)||0),0),noi=egi-totalExp;
+  const [inc,si]=useState({gpr:"240000",other:"12000",vac:"5",creditLoss:"1"});
+  const [exp,se]=useState({taxes:"22000",insurance:"9600",mgmt:"9600",maint:"14400",utils:"7200",reserves:"6000",payroll:"0",marketing:"2400",landscaping:"1800",other:"3600"});
+  const gpr=parseFloat(inc.gpr)||0,other=parseFloat(inc.other)||0;
+  const vacLoss=gpr*(parseFloat(inc.vac)/100||0),creditLoss=gpr*(parseFloat(inc.creditLoss)/100||0);
+  const egi=gpr-vacLoss-creditLoss+other;
+  const totalExp=Object.values(exp).reduce((s,v)=>s+(parseFloat(v)||0),0);
+  const noi=egi-totalExp,oer=egi>0?totalExp/egi*100:0;
+  const expLabels={taxes:"Property Taxes",insurance:"Insurance",mgmt:"Property Mgmt",maint:"Maintenance",utils:"Utilities",reserves:"Capital Reserves",payroll:"Payroll",marketing:"Marketing/Leasing",landscaping:"Landscaping",other:"Other Expenses"};
+  const benchmarks={oer:{low:35,high:50},vac:{low:5,high:10}};
   return(
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18}}>
       <div>
-        <div style={P}><SL>Income</SL>{[["Gross Income ($)","gross",[si]],["Other Income ($)","other",[si]],["Vacancy (%)","vac",[si]]].map(([l,k])=><div key={k} style={{marginBottom:10}}><FL l={l}/><Inp val={inc[k]} set={v=>si(p=>({...p,[k]:v}))} mono/></div>)}</div>
-        <div style={{...P,marginTop:14}}><SL>Expenses</SL>{Object.entries(exp).map(([k,v])=><div key={k} style={{marginBottom:9}}><FL l={k.replace("2","")+" ($)"}/><Inp val={v} set={nv=>se(p=>({...p,[k]:nv}))} mono/></div>)}</div>
+        <div style={P}>
+          <SL>Income</SL>
+          <UWInput label="Gross Potential Rent (GPR)" value={inc.gpr} set={v=>si(p=>({...p,gpr:v}))} prefix="$"/>
+          <UWInput label="Other Income (parking, laundry, etc)" value={inc.other} set={v=>si(p=>({...p,other:v}))} prefix="$"/>
+          <UWInput label="Vacancy Rate" value={inc.vac} set={v=>si(p=>({...p,vac:v}))} suffix="%"/>
+          <UWInput label="Credit Loss Rate" value={inc.creditLoss} set={v=>si(p=>({...p,creditLoss:v}))} suffix="%"/>
+        </div>
+        <div style={{...P,marginTop:14}}>
+          <SL>Operating Expenses</SL>
+          {Object.entries(exp).map(([k,v])=>(
+            <UWInput key={k} label={expLabels[k]} value={v} set={nv=>se(p=>({...p,[k]:nv}))} prefix="$"/>
+          ))}
+        </div>
       </div>
-      <div style={P}>
-        <SL>NOI Waterfall</SL>
-        {[{l:"Gross Scheduled Income",v:gross,t:"inc"},{l:`Vacancy Loss (${inc.vac}%)`,v:-vacL,t:"loss"},{l:"Other Income",v:oth,t:"inc"},{l:"Effective Gross Income",v:egi,t:"tot"},{l:"Total Operating Expenses",v:-totalExp,t:"loss"},{l:"Net Operating Income",v:noi,t:"noi"}].map((r,i)=>(
-          <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:`1px solid ${r.t==="noi"?C.borderGold:C.border}`,background:r.t==="noi"?`${C.goldMuted}0E`:"transparent"}}>
-            <span style={{fontSize:12,color:r.t==="noi"?C.goldBright:r.t==="tot"?C.text:C.muted}}>{r.l}</span>
-            <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:r.t==="noi"?C.goldBright:r.v<0?C.danger:r.t==="tot"?C.white:C.text}}>{r.v<0?`-$${Math.abs(Math.round(r.v)).toLocaleString()}`:`$${Math.round(r.v).toLocaleString()}`}</span>
+      <div>
+        <div style={P}>
+          <SL>NOI Waterfall</SL>
+          {[
+            {l:"Gross Potential Rent",v:gpr,type:"inc"},
+            {l:`Vacancy Loss (${inc.vac}%)`,v:-vacLoss,type:"loss"},
+            {l:`Credit Loss (${inc.creditLoss}%)`,v:-creditLoss,type:"loss"},
+            {l:"Other Income",v:other,type:"inc"},
+            {l:"Effective Gross Income",v:egi,type:"sub"},
+            {l:"Total Operating Expenses",v:-totalExp,type:"loss"},
+            {l:"Net Operating Income",v:noi,type:"noi"},
+          ].map((r,i)=>(
+            <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:`1px solid ${r.type==="noi"?C.borderGold:C.border}`,background:r.type==="noi"?`${C.goldMuted}0A`:"transparent"}}>
+              <span style={{fontSize:12,color:r.type==="noi"?C.goldBright:r.type==="sub"?C.text:C.muted,fontWeight:r.type==="noi"||r.type==="sub"?600:400}}>{r.l}</span>
+              <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:r.type==="noi"?C.goldBright:r.v<0?C.danger:r.type==="sub"?C.white:C.text}}>
+                {r.v<0?`-${fmtD(Math.abs(r.v))}`:fmtD(r.v)}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div style={{...P,marginTop:14}}>
+          <SL>Ratio Analysis</SL>
+          <div style={{marginBottom:14}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+              <span style={{fontSize:12,color:C.muted}}>Operating Expense Ratio</span>
+              <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:oer<=45?C.success:oer<=55?C.warn:C.danger}}>{oer.toFixed(1)}%</span>
+            </div>
+            <Bar pct={oer} color={oer<=45?C.success:oer<=55?C.warn:C.danger} max={80}/>
+            <div style={{fontSize:10,color:C.dim,marginTop:3}}>Benchmark: 35–50% is typical. Below 35% may signal under-spending on maintenance.</div>
           </div>
-        ))}
+          <div style={{marginBottom:14}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+              <span style={{fontSize:12,color:C.muted}}>Vacancy Rate</span>
+              <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:parseFloat(inc.vac)<=7?C.success:parseFloat(inc.vac)<=12?C.warn:C.danger}}>{inc.vac}%</span>
+            </div>
+            <Bar pct={parseFloat(inc.vac)||0} color={parseFloat(inc.vac)<=7?C.success:parseFloat(inc.vac)<=12?C.warn:C.danger} max={30}/>
+            <div style={{fontSize:10,color:C.dim,marginTop:3}}>Benchmark: 5–7% stabilized. 10%+ signals risk. Lenders often underwrite to 5%.</div>
+          </div>
+          <div style={{background:C.card2,borderRadius:8,padding:"12px 14px"}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              {[[`NOI Margin`,`${egi>0?(noi/egi*100).toFixed(1):0}%`],[`NOI/Unit (est)`,noi>0?fmtD(noi/Math.max(1,Math.round(gpr/12000))):"-"],[`Expense/GPR`,`${gpr>0?(totalExp/gpr*100).toFixed(1):0}%`],[`EGI`,fmtD(egi)]].map(([l,v])=>(
+                <div key={l}><div style={{fontSize:9,color:C.dim,marginBottom:2}}>{l}</div><div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:C.text}}>{v}</div></div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
 function LTVCalc() {
-  const [v,sv]=useState({price:"2500000",loan:"1750000",appraised:"2600000",constrCost:"0"});
+  const [v,sv]=useState({price:"2500000",loan:"1750000",appraised:"2600000",constrCost:"0",noi:"175000"});
   const s=k=>val=>sv(p=>({...p,[k]:val}));
   const price=parseFloat(v.price)||0,loan=parseFloat(v.loan)||0,app=parseFloat(v.appraised)||price;
-  const ltv=price>0?(loan/price*100):0,ltc=(price+parseFloat(v.constrCost||0))>0?(loan/(price+(parseFloat(v.constrCost)||0))*100):0,ltarv=app>0?(loan/app*100):0;
+  const constr=parseFloat(v.constrCost)||0,noi=parseFloat(v.noi)||0;
+  const ltv=price>0?loan/price*100:0;
+  const ltc=(price+constr)>0?loan/(price+constr)*100:0;
+  const ltarv=app>0?loan/app*100:0;
+  const dy=loan>0?noi/loan*100:0;
+  const tdc=price+constr,equity=price-loan;
+  const leverageMetrics=[
+    {l:"LTV",v:ltv,max:80,ok:ltv<=75,warn:ltv<=80,def:"Loan ÷ Purchase Price"},
+    {l:"LTC",v:ltc,max:85,ok:ltc<=80,warn:ltc<=85,def:"Loan ÷ (Price + Const)"},
+    {l:"LTARV",v:ltarv,max:75,ok:ltarv<=70,warn:ltarv<=75,def:"Loan ÷ Appraised Value"},
+  ];
   return(
-    <div style={{display:"grid",gridTemplateColumns:"320px 1fr",gap:18}}>
-      <div style={P}>{[["Purchase Price ($)","price"],["Loan Amount ($)","loan"],["Appraised Value ($)","appraised"],["Construction Cost ($)","constrCost"]].map(([l,k])=><div key={k} style={{marginBottom:11}}><FL l={l}/><Inp val={v[k]} set={s(k)} mono/></div>)}</div>
+    <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:18}}>
       <div style={P}>
-        <SL>Leverage Analysis</SL>
-        {[{l:"LTV",v:ltv,max:80},{l:"LTC",v:ltc,max:85},{l:"LTARV",v:ltarv,max:75}].map((m,i)=>(
-          <div key={i} style={{marginBottom:18}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}><span style={{fontSize:12,color:C.muted}}>{m.l}</span><span style={{fontFamily:"'DM Mono',monospace",fontSize:13,color:m.v<=m.max?C.success:C.danger}}>{m.v>0?`${m.v.toFixed(1)}%`:"—"}</span></div>
-            <div style={{height:7,background:C.border,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${Math.min(m.v,100)}%`,background:m.v<=m.max?C.success:C.danger,borderRadius:3,transition:"width .5s"}}/></div>
-            <div style={{fontSize:9,color:C.dim,marginTop:3}}>Lender threshold: ≤{m.max}%</div>
+        <SL>Deal Inputs</SL>
+        <UWInput label="Purchase Price" value={v.price} set={s("price")} prefix="$"/>
+        <UWInput label="Loan Amount" value={v.loan} set={s("loan")} prefix="$"/>
+        <UWInput label="Appraised / ARV" value={v.appraised} set={s("appraised")} prefix="$"/>
+        <UWInput label="Construction / Rehab Cost" value={v.constrCost} set={s("constrCost")} prefix="$"/>
+        <UWInput label="Annual NOI" value={v.noi} set={s("noi")} prefix="$" />
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:4}}>
+          {[["Equity",fmtD(equity)],[" TDC",fmtD(tdc)]].map(([l,val])=>(
+            <div key={l} style={{background:C.card2,borderRadius:7,padding:"10px 12px"}}><div style={{fontSize:9,color:C.muted,marginBottom:3}}>{l}</div><div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:C.text}}>{val}</div></div>
+          ))}
+        </div>
+      </div>
+      <div>
+        <div style={P}>
+          <SL>Leverage Metrics</SL>
+          {leverageMetrics.map((m,i)=>(
+            <div key={i} style={{marginBottom:18}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                <div>
+                  <span style={{fontSize:13,fontWeight:600,color:C.text}}>{m.l}</span>
+                  <span style={{fontSize:10,color:C.dim,marginLeft:8}}>{m.def}</span>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <StatusPill text={m.ok?"Within limits":m.warn?"At limit":"Exceeds limit"} ok={m.ok} warn={m.warn&&!m.ok}/>
+                  <span style={{fontFamily:"'DM Mono',monospace",fontSize:15,fontWeight:700,color:m.ok?C.success:m.warn?C.warn:C.danger}}>{m.v.toFixed(1)}%</span>
+                </div>
+              </div>
+              <div style={{height:8,background:C.border,borderRadius:4,overflow:"hidden"}}>
+                <div style={{height:"100%",width:`${Math.min(m.v/m.max*100,100)}%`,background:m.ok?C.success:m.warn?C.warn:C.danger,borderRadius:4,transition:"width .4s"}}/>
+              </div>
+              <div style={{fontSize:9,color:C.dim,marginTop:3}}>Max: {m.max}% · Current: {m.v.toFixed(1)}% · Headroom: {Math.max(0,m.max-m.v).toFixed(1)}%</div>
+            </div>
+          ))}
+        </div>
+        <div style={P}>
+          <SL>Debt Yield</SL>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
+            <div>
+              <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:48,fontWeight:700,color:dy>=9?C.success:dy>=7?C.goldBright:C.warn,lineHeight:1}}>{dy.toFixed(2)}%</div>
+              <div style={{fontSize:11,color:C.muted,marginTop:4}}>NOI ÷ Loan Amount</div>
+            </div>
+            <div style={{fontSize:12,color:C.muted,maxWidth:260,lineHeight:1.6}}>
+              Lender benchmark: <span style={{color:C.white}}>8–10%+</span> for life companies and CMBS. Below 8% = tougher execution. Below 6% = very limited options.
+              <StatusPill text={dy>=9?"Strong — most lenders":dy>=7?"Acceptable":"Below typical floors"} ok={dy>=9} warn={dy>=7&&dy<9}/>
+            </div>
           </div>
-        ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LoanSizingCalc() {
+  const [v,sv]=useState({noi:"175000",rate:"6.75",amort:"25",dscr:"1.25",ltv:"70",price:"2500000"});
+  const s=k=>val=>sv(p=>({...p,[k]:val}));
+  const noi=parseFloat(v.noi)||0,rate=parseFloat(v.rate)||0,amort=parseFloat(v.amort)||25;
+  const dscrFloor=parseFloat(v.dscr)||1.25,ltvMax=parseFloat(v.ltv)/100||0.70,price=parseFloat(v.price)||0;
+  // Max loan from DSCR constraint
+  const annDebtAllowed=noi/dscrFloor;
+  const mPmtAllowed=annDebtAllowed/12;
+  const r=rate/100/12,n=amort*12;
+  const maxLoanDSCR=mPmtAllowed>0&&r>0?mPmtAllowed*(Math.pow(1+r,n)-1)/(r*Math.pow(1+r,n)):0;
+  // Max loan from LTV constraint
+  const maxLoanLTV=price*ltvMax;
+  // Binding constraint
+  const bindingLoan=Math.min(maxLoanDSCR,maxLoanLTV);
+  const bindingIs=maxLoanDSCR<maxLoanLTV?"DSCR":"LTV";
+  const equity=price-bindingLoan;
+  const actualDSCR=bindingLoan>0?noi/(monthlyPmt(bindingLoan,rate,amort)*12):0;
+  const actualLTV=price>0?bindingLoan/price*100:0;
+  const dy=bindingLoan>0?noi/bindingLoan*100:0;
+  const dscrRows=[1.15,1.20,1.25,1.30,1.35,1.40].map(d=>{
+    const adb=noi/d/12;
+    const ml=adb>0&&r>0?adb*(Math.pow(1+r,n)-1)/(r*Math.pow(1+r,n)):0;
+    return{dscr:d,loan:Math.min(ml,maxLoanLTV),ltv:price>0?Math.min(ml,maxLoanLTV)/price*100:0};
+  });
+  return(
+    <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:18}}>
+      <div style={P}>
+        <SL>Deal Parameters</SL>
+        <UWInput label="Annual NOI" value={v.noi} set={s("noi")} prefix="$"/>
+        <UWInput label="Interest Rate" value={v.rate} set={s("rate")} suffix="%"/>
+        <UWInput label="Amortization" value={v.amort} set={s("amort")} suffix="yr"/>
+        <UWInput label="Purchase Price (for LTV)" value={v.price} set={s("price")} prefix="$"/>
+        <div style={{background:`${C.gold}11`,border:`1px solid ${C.borderGold}`,borderRadius:9,padding:"12px 14px",marginTop:16}}>
+          <div style={{fontSize:10,color:C.gold,fontFamily:"'DM Mono',monospace",marginBottom:10}}>LENDER CONSTRAINTS</div>
+          <UWInput label="DSCR Floor" value={v.dscr} set={s("dscr")} suffix="x"/>
+          <UWInput label="Max LTV" value={v.ltv} set={s("ltv")} suffix="%"/>
+        </div>
+      </div>
+      <div>
+        <div style={{background:C.surface,border:`2px solid ${C.borderGold}`,borderRadius:14,padding:"20px 22px",marginBottom:16,textAlign:"center"}}>
+          <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.gold,letterSpacing:".15em",marginBottom:6}}>MAXIMUM LOAN AMOUNT</div>
+          <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:54,fontWeight:700,color:C.goldBright,lineHeight:1}}>{fmtD(bindingLoan)}</div>
+          <div style={{fontSize:12,color:C.muted,marginTop:6}}>Binding constraint: <strong style={{color:C.white}}>{bindingIs}</strong></div>
+          <div style={{display:"flex",gap:16,justifyContent:"center",marginTop:14,flexWrap:"wrap"}}>
+            <StatusPill text={`DSCR: ${actualDSCR.toFixed(2)}x`} ok={actualDSCR>=1.25} warn={actualDSCR>=1.10}/>
+            <StatusPill text={`LTV: ${actualLTV.toFixed(1)}%`} ok={actualLTV<=75} warn={actualLTV<=80}/>
+            <StatusPill text={`DY: ${dy.toFixed(1)}%`} ok={dy>=9} warn={dy>=7}/>
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+          <MetricCard label="MAX LOAN (DSCR)" value={fmtD(maxLoanDSCR)} sub={`At ${v.dscr}x floor`} color={C.blue}/>
+          <MetricCard label="MAX LOAN (LTV)" value={fmtD(maxLoanLTV)} sub={`At ${v.ltv}% LTV`} color={C.teal}/>
+          <MetricCard label="EQUITY REQUIRED" value={fmtD(equity)} sub={`${price>0?(equity/price*100).toFixed(1):0}% of price`} color={C.gold}/>
+          <MetricCard label="DEBT YIELD" value={`${dy.toFixed(2)}%`} sub="NOI ÷ Loan" color={dy>=9?C.success:C.warn}/>
+        </div>
+        <div style={P}>
+          <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:12}}>MAX LOAN BY DSCR FLOOR (LTV CAPPED AT {v.ltv}%)</div>
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
+            <thead><tr>{["DSCR Floor","Max Loan","LTV","Equity"].map(h=><th key={h} style={{padding:"7px 10px",fontSize:9,color:C.muted,fontWeight:400,fontFamily:"'DM Mono',monospace",textAlign:h==="DSCR Floor"?"left":"right",borderBottom:`1px solid ${C.border}`}}>{h}</th>)}</tr></thead>
+            <tbody>{dscrRows.map(row=>(
+              <tr key={row.dscr} style={{background:row.dscr===dscrFloor?`${C.goldMuted}11`:"transparent"}}>
+                <td style={{padding:"8px 10px",fontFamily:"'DM Mono',monospace",fontSize:11,color:row.dscr===dscrFloor?C.gold:C.muted}}>{row.dscr.toFixed(2)}x{row.dscr===dscrFloor?" ← target":""}</td>
+                <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:11,color:C.text}}>{fmtD(row.loan)}</td>
+                <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:11,color:row.ltv<=75?C.success:C.warn}}>{row.ltv.toFixed(1)}%</td>
+                <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:11,color:C.muted}}>{fmtD(price-row.loan)}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
 }
 
 function IRRCalc() {
-  const [v,sv]=useState({price:"2500000",noi:"175000",ltv:"70",rate:"6.75",amort:"25",growth:"3",hold:"5",exitCap:"6.0",cc:"2"});
+  const [v,sv]=useState({price:"2500000",noi:"175000",ltv:"70",rate:"6.75",amort:"25",growth:"3",hold:"5",exitCap:"6.25",cc:"2",dispCosts:"1"});
   const s=k=>val=>sv(p=>({...p,[k]:val}));
-  const price=parseFloat(v.price)||0,noi0=parseFloat(v.noi)||0,ltv=parseFloat(v.ltv)/100||0;
-  const r=parseFloat(v.rate)/100/12||0,am=parseFloat(v.amort)*12,growth=parseFloat(v.growth)/100||0.03;
-  const hold=parseInt(v.hold)||5,exitCap=parseFloat(v.exitCap)/100||0.06;
-  const loan=price*ltv,mPmt=r>0?loan*(r*Math.pow(1+r,am))/(Math.pow(1+r,am)-1):0,annDebt=mPmt*12;
-  const equity=price*(1-ltv)*(1+(parseFloat(v.cc)/100||0.02));
+  const price=parseFloat(v.price)||0,noi0=parseFloat(v.noi)||0,ltvN=parseFloat(v.ltv)/100||0;
+  const rate=parseFloat(v.rate)||0,amort=parseFloat(v.amort)||25;
+  const growth=parseFloat(v.growth)/100||0.03,hold=parseInt(v.hold)||5;
+  const exitCap=parseFloat(v.exitCap)/100||0.0625;
+  const loan=price*ltvN,pmt=monthlyPmt(loan,rate,amort),annDebt=pmt*12;
+  const equity=price*(1-ltvN)*(1+(parseFloat(v.cc)/100||0.02));
   const noiExit=noi0*Math.pow(1+growth,hold);
-  let loanBal=loan;for(let m=1;m<=hold*12;m++){const int=loanBal*r;loanBal-=(mPmt-int);}
-  const sale=exitCap>0?(noiExit/exitCap):0,proc=sale-loanBal;
-  const cfs=[-equity,...Array.from({length:hold},(_,i)=>(noi0*Math.pow(1+growth,i))-annDebt)];
-  cfs[cfs.length-1]+=proc;
-  const em=equity>0?(proc+cfs.slice(1).reduce((s,v)=>s+v,0))/equity:0;
-  let irr=0.15;for(let i=0;i<100;i++){const val=cfs.reduce((s,cf,j)=>s+cf/Math.pow(1+irr,j),0);const dv=cfs.reduce((s,cf,j)=>s-j*cf/Math.pow(1+irr,j+1),0);if(Math.abs(dv)<0.001)break;irr-=val/dv;}
+  const endBal=loanBal(loan,rate,amort,hold);
+  const salePrice=exitCap>0?noiExit/exitCap:0;
+  const dispCosts=salePrice*(parseFloat(v.dispCosts)/100||0.01);
+  const netProc=salePrice-endBal-dispCosts;
+  const yearCFs=Array.from({length:hold},(_,i)=>(noi0*Math.pow(1+growth,i))-annDebt);
+  const allCFs=[-equity,...yearCFs.map((cf,i)=>i===hold-1?cf+netProc:cf)];
+  const irr=calcIRR(allCFs);
+  const totalCash=yearCFs.reduce((s,v)=>s+v,0)+netProc;
+  const em=equity>0?totalCash/equity:0;
+  const coc1=equity>0?yearCFs[0]/equity*100:0;
+  const capEntry=price>0?noi0/price*100:0,capExit=salePrice>0?noiExit/salePrice*100:0;
   return(
-    <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:18}}>
-      <div style={P}>{[["Purchase Price ($)","price"],["Year 1 NOI ($)","noi"],["LTV (%)","ltv"],["Rate (%)","rate"],["NOI Growth (%/yr)","growth"],["Hold Period (yrs)","hold"],["Exit Cap Rate (%)","exitCap"],["Closing Costs (%)","cc"]].map(([l,k])=><div key={k} style={{marginBottom:9}}><FL l={l}/><Inp val={v[k]} set={s(k)} mono/></div>)}</div>
-      <div>
-        <div style={{...P,marginBottom:14}}><SL>Returns</SL>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-            {[{l:"Equity",v:`$${Math.round(equity).toLocaleString()}`,ok:true},{l:"Exit Price",v:sale>0?`$${Math.round(sale).toLocaleString()}`:"—",ok:sale>price},{l:"Equity Multiple",v:`${em.toFixed(2)}x`,ok:em>=2},{l:"IRR",v:`${(irr*100).toFixed(1)}%`,ok:irr>=0.12}].map((m,i)=>(
-              <div key={i} style={{background:C.card2,borderRadius:8,padding:14}}><div style={{fontSize:10,color:C.muted,marginBottom:5}}>{m.l}</div><div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:600,color:m.ok?C.success:C.danger}}>{m.v}</div></div>
+    <div>
+      <div style={{display:"grid",gridTemplateColumns:"280px 1fr",gap:18,marginBottom:16}}>
+        <div style={P}>
+          <SL>Deal Inputs</SL>
+          <UWInput label="Purchase Price" value={v.price} set={s("price")} prefix="$"/>
+          <UWInput label="Year 1 NOI" value={v.noi} set={s("noi")} prefix="$"/>
+          <UWInput label="LTV" value={v.ltv} set={s("ltv")} suffix="%"/>
+          <UWInput label="Interest Rate" value={v.rate} set={s("rate")} suffix="%"/>
+          <UWInput label="Amortization" value={v.amort} set={s("amort")} suffix="yr"/>
+          <UWInput label="NOI Growth Rate" value={v.growth} set={s("growth")} suffix="%/yr"/>
+          <UWInput label="Hold Period" value={v.hold} set={s("hold")} suffix="yr"/>
+          <UWInput label="Exit Cap Rate" value={v.exitCap} set={s("exitCap")} suffix="%"/>
+          <UWInput label="Closing Costs (entry)" value={v.cc} set={s("cc")} suffix="%"/>
+          <UWInput label="Disposition Costs (exit)" value={v.dispCosts} set={s("dispCosts")} suffix="%"/>
+        </div>
+        <div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+            <MetricCard label="LEVERED IRR" value={`${(irr*100).toFixed(1)}%`} sub={irr>=0.15?"Exceeds 15% target":irr>=0.12?"Meets 12% floor":"Below typical floor"} color={irr>=0.15?C.success:irr>=0.12?C.goldBright:C.danger} size={36}/>
+            <MetricCard label="EQUITY MULTIPLE" value={`${em.toFixed(2)}x`} sub={em>=2?"Exceeds 2x target":em>=1.5?"Acceptable return":"Below 1.5x target"} color={em>=2?C.success:em>=1.5?C.goldBright:C.danger} size={36}/>
+            <MetricCard label="YEAR 1 COC" value={`${coc1.toFixed(1)}%`} sub={`After ${fmtD(annDebt)}/yr debt svc`} color={coc1>=6?C.success:coc1>=4?C.goldBright:C.warn}/>
+            <MetricCard label="EXIT PRICE" value={fmtD(salePrice)} sub={`${capExit.toFixed(2)}% exit cap`} color={salePrice>price?C.success:C.warn}/>
+            <MetricCard label="ENTRY EQUITY" value={fmtD(equity)} sub={`${((1-ltvN)*100).toFixed(0)}% + ${v.cc}% CC`}/>
+            <MetricCard label="NET SALE PROCEEDS" value={fmtD(netProc)} sub={`After ${fmtD(endBal)} payoff`} color={netProc>0?C.success:C.danger}/>
+          </div>
+          <div style={P}>
+            <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:12}}>RETURN ATTRIBUTION</div>
+            {[["Entry Cap Rate",`${capEntry.toFixed(2)}%`],["Exit Cap Rate",`${capExit.toFixed(2)}%`],["Cap Rate Delta",`${(capExit-capEntry>=0?"+":"")+(capExit-capEntry).toFixed(2)}%`,capExit<=capEntry],["NOI Growth (Total)",`+${((Math.pow(1+growth,hold)-1)*100).toFixed(1)}%`,true],["Leverage Benefit",`${(annDebt/equity*100).toFixed(1)}% debt yield on equity`]].map(([l,val,ok],i)=>(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
+                <span style={{fontSize:12,color:C.muted}}>{l}</span>
+                <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:ok!==undefined?(ok?C.success:C.warn):C.text}}>{val}</span>
+              </div>
             ))}
           </div>
         </div>
-        <div style={P}><SL>Cash Flow by Year</SL>{cfs.slice(1).map((cf,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:`1px solid ${C.border}`}}><span style={{fontSize:12,color:C.muted}}>Year {i+1}{i===hold-1?" (+ sale)":""}</span><span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:cf>0?C.success:C.danger}}>${Math.round(cf).toLocaleString()}</span></div>)}</div>
+      </div>
+      <div style={P}>
+        <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:12}}>YEAR-BY-YEAR CASH FLOW WATERFALL</div>
+        <table style={{width:"100%",borderCollapse:"collapse"}}>
+          <thead><tr>{["Year","NOI","Debt Service","Before-Tax CF","Cum. Cash","Ending Balance"].map(h=><th key={h} style={{padding:"7px 10px",fontSize:9,color:C.muted,fontWeight:400,fontFamily:"'DM Mono',monospace",textAlign:h==="Year"?"left":"right",borderBottom:`1px solid ${C.border}`}}>{h}</th>)}</tr></thead>
+          <tbody>
+            {Array.from({length:hold},(_,i)=>{
+              const yr=i+1,noiYr=noi0*Math.pow(1+growth,i),cf=noiYr-annDebt;
+              const cumCF=yearCFs.slice(0,i+1).reduce((s,v)=>s+v,0);
+              const endBalYr=loanBal(loan,rate,amort,yr);
+              const isSale=yr===hold;
+              return(
+                <tr key={yr} style={{borderBottom:`1px solid ${isSale?C.borderGold:C.border}`,background:isSale?`${C.goldMuted}08`:"transparent"}}>
+                  <td style={{padding:"9px 10px",fontFamily:"'DM Mono',monospace",fontSize:11,color:isSale?C.gold:C.muted}}>Yr {yr}{isSale?" (exit)":""}</td>
+                  <td style={{padding:"9px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:11,color:C.text}}>{fmtD(noiYr)}</td>
+                  <td style={{padding:"9px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:11,color:C.muted}}>{fmtD(annDebt)}</td>
+                  <td style={{padding:"9px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:11,color:cf>0?C.success:C.danger}}>{fmtD(cf)}{isSale?` + ${fmtD(netProc)} sale`:""}</td>
+                  <td style={{padding:"9px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:11,color:cumCF+(isSale?netProc:0)>0?C.success:C.danger}}>{fmtD(cumCF+(isSale?netProc:0))}</td>
+                  <td style={{padding:"9px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:11,color:C.dim}}>{fmtD(endBalYr)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
 
 function CFProj() {
-  const [v,sv]=useState({price:"2500000",noi:"175000",ltv:"70",rate:"6.75",amort:"25",growth:"3"});
+  const [v,sv]=useState({price:"2500000",noi:"175000",ltv:"70",rate:"6.75",amort:"25",growth:"3",expGrowth:"3",reversion:"5"});
   const s=k=>val=>sv(p=>({...p,[k]:val}));
-  const price=parseFloat(v.price)||0,noi0=parseFloat(v.noi)||0,ltv=parseFloat(v.ltv)/100||0,r=parseFloat(v.rate)/100/12||0,am=parseFloat(v.amort)*12,growth=parseFloat(v.growth)/100||0.03;
-  const loan=price*ltv,mPmt=r>0?loan*(r*Math.pow(1+r,am))/(Math.pow(1+r,am)-1):0,annDebt=mPmt*12,equity=price*(1-ltv);
-  const rows=Array.from({length:5},(_,i)=>{const n=noi0*Math.pow(1+growth,i),cf=n-annDebt,coc=equity>0?(cf/equity*100):0;return{yr:i+1,noi:Math.round(n),cf:Math.round(cf),coc:coc.toFixed(1)};});
+  const price=parseFloat(v.price)||0,noi0=parseFloat(v.noi)||0,ltvN=parseFloat(v.ltv)/100||0;
+  const rate=parseFloat(v.rate)||0,amort=parseFloat(v.amort)||25;
+  const growth=parseFloat(v.growth)/100||0.03,expGrowth=parseFloat(v.expGrowth)/100||0.03;
+  const loan=price*ltvN,pmt=monthlyPmt(loan,rate,amort),annDebt=pmt*12,equity=price*(1-ltvN);
+  const cap0=price>0?noi0/price*100:0;
+  const rows=Array.from({length:10},(_,i)=>{
+    const noiYr=noi0*Math.pow(1+growth,i);
+    const cf=noiYr-annDebt,coc=equity>0?cf/equity*100:0;
+    const endBalYr=loanBal(loan,rate,amort,i+1);
+    const cumPrincipal=loan-endBalYr;
+    const capYr=price>0?noiYr/price*100:0;
+    return{yr:i+1,noi:Math.round(noiYr),cf:Math.round(cf),coc:coc.toFixed(1),bal:Math.round(endBalYr),prin:Math.round(cumPrincipal),cap:capYr.toFixed(2)};
+  });
+  const maxBar=Math.max(...rows.map(r=>Math.abs(r.cf)));
   return(
-    <div style={P}>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:12,marginBottom:22}}>
-        {[["Purchase Price ($)","price"],["Year 1 NOI ($)","noi"],["LTV (%)","ltv"],["Rate (%)","rate"],["NOI Growth (%)","growth"]].map(([l,k])=><div key={k}><FL l={l}/><Inp val={v[k]} set={s(k)} mono/></div>)}
+    <div>
+      <div style={{...P,marginBottom:16}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10,marginBottom:0}}>
+          {[["Purchase Price","price","$"],["Year 1 NOI","noi","$"],["LTV","ltv","%"],["Rate","rate","%"],["Amort","amort","yr"],["NOI Growth","growth","%"],["Expense Growth","expGrowth","%"]].map(([l,k,suf])=>(
+            <UWInput key={k} label={l} value={v[k]} set={s(k)} suffix={suf==="$"?undefined:suf} prefix={suf==="$"?"$":undefined}/>
+          ))}
+        </div>
       </div>
-      <SL>5-Year Cash Flow Projection</SL>
-      <table style={{width:"100%",borderCollapse:"collapse"}}>
-        <thead><tr>{["Year","NOI","Annual Debt Svc","Before-Tax CF","CoC Return"].map(h=><th key={h} style={{padding:"8px 10px",textAlign:"right",fontSize:9,color:C.muted,fontWeight:400,fontFamily:"'DM Mono',monospace",borderBottom:`1px solid ${C.border}`}}>{h}</th>)}</tr></thead>
-        <tbody>{rows.map(row=><tr key={row.yr} style={{borderBottom:`1px solid ${C.border}`}}><td style={{padding:"10px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:11,color:C.muted}}>Yr {row.yr}</td><td style={{padding:"10px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:11,color:C.text}}>${row.noi.toLocaleString()}</td><td style={{padding:"10px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:11,color:C.muted}}>${Math.round(annDebt).toLocaleString()}</td><td style={{padding:"10px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:11,color:row.cf>0?C.success:C.danger}}>${row.cf.toLocaleString()}</td><td style={{padding:"10px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:11,color:parseFloat(row.coc)>6?C.success:C.warn}}>{row.coc}%</td></tr>)}</tbody>
-      </table>
+      {/* Visual Chart */}
+      <div style={P}>
+        <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:16}}>BEFORE-TAX CASH FLOW — 10-YEAR PROJECTION</div>
+        <div style={{display:"flex",gap:6,alignItems:"flex-end",height:100,marginBottom:8}}>
+          {rows.map(r=>{
+            const h=maxBar>0?Math.abs(r.cf)/maxBar*80:0;
+            return(
+              <div key={r.yr} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+                <div style={{fontSize:7,color:C.dim,fontFamily:"'DM Mono',monospace"}}>{r.cf>0?`+${Math.round(r.cf/1000)}K`:Math.round(r.cf/1000)+"K"}</div>
+                <div style={{width:"100%",height:`${h}px`,background:r.cf>0?`${C.success}99`:`${C.danger}99`,borderRadius:"3px 3px 0 0",minHeight:2}}/>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{display:"flex",gap:6}}>
+          {rows.map(r=><div key={r.yr} style={{flex:1,textAlign:"center",fontSize:8,color:C.dim,fontFamily:"'DM Mono',monospace"}}>Y{r.yr}</div>)}
+        </div>
+      </div>
+      <div style={P}>
+        <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:12}}>10-YEAR CASH FLOW PROJECTION</div>
+        <table style={{width:"100%",borderCollapse:"collapse"}}>
+          <thead><tr>{["Year","NOI","Debt Svc","Before-Tax CF","CoC %","Cap Rate","Loan Balance","Cum. Principal"].map(h=><th key={h} style={{padding:"7px 8px",fontSize:8,color:C.muted,fontWeight:400,fontFamily:"'DM Mono',monospace",textAlign:h==="Year"?"left":"right",borderBottom:`1px solid ${C.border}`}}>{h}</th>)}</tr></thead>
+          <tbody>{rows.map(r=>(
+            <tr key={r.yr} style={{borderBottom:`1px solid ${C.border}`,background:r.yr%2===0?`${C.surface}`:C.bg}}>
+              <td style={{padding:"8px 8px",fontFamily:"'DM Mono',monospace",fontSize:10,color:C.muted}}>Yr {r.yr}</td>
+              <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:10,color:C.text}}>{fmtD(r.noi)}</td>
+              <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:10,color:C.muted}}>{fmtD(annDebt)}</td>
+              <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:10,color:r.cf>0?C.success:C.danger}}>{fmtD(r.cf)}</td>
+              <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:10,color:parseFloat(r.coc)>=6?C.success:parseFloat(r.coc)>=4?C.warn:C.danger}}>{r.coc}%</td>
+              <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:10,color:C.dim}}>{r.cap}%</td>
+              <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:10,color:C.dim}}>{fmtD(r.bal)}</td>
+              <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:10,color:C.teal}}>{fmtD(r.prin)}</td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
     </div>
   );
 }
 
 function SensMatrix() {
-  const baseNOI=175000,basePrice=2500000;
-  const caps=[4.5,5.0,5.5,6.0,6.5,7.0,7.5],noiVars=[-15,-10,-5,0,5,10,15];
-  const val=(nv,cr)=>Math.round((baseNOI*(1+nv/100))/(cr/100)/1000);
-  const base=basePrice/1000;
+  const [v,sv]=useState({baseNOI:"175000",basePrice:"2500000",baseRate:"6.75",baseLTV:"70",baseAmort:"25",view:"value"});
+  const s=k=>val=>sv(p=>({...p,[k]:val}));
+  const baseNOI=parseFloat(v.baseNOI)||175000,basePrice=parseFloat(v.basePrice)||2500000;
+  const baseRate=parseFloat(v.baseRate)||6.75,baseLTV=parseFloat(v.baseLTV)/100||0.70,baseAmort=parseFloat(v.baseAmort)||25;
+  const baseLoan=basePrice*baseLTV,basePmt=monthlyPmt(baseLoan,baseRate,baseAmort),baseDebt=basePmt*12;
+  const caps=[4.5,5.0,5.5,6.0,6.5,7.0,7.5];
+  const noiVars=[-20,-10,-5,0,5,10,20];
+  const rates=[5.50,6.00,6.50,7.00,7.50,8.00,8.50];
+  const ltvs=[55,60,65,70,75,80];
   return(
-    <div style={P}>
-      <SL>Sensitivity Matrix — Property Value ($K) vs NOI Δ and Cap Rate</SL>
-      <div style={{overflowX:"auto",marginTop:14}}>
-        <table style={{borderCollapse:"collapse"}}>
-          <thead><tr><th style={{padding:"7px 10px",fontSize:9,color:C.muted,fontWeight:400,textAlign:"left",fontFamily:"'DM Mono',monospace"}}>NOI Δ \ Cap</th>{caps.map(cr=><th key={cr} style={{padding:"7px 10px",fontSize:9,color:C.muted,fontWeight:400,textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{cr}%</th>)}</tr></thead>
-          <tbody>{noiVars.map(nv=><tr key={nv}><td style={{padding:"7px 10px",fontSize:11,fontFamily:"'DM Mono',monospace",color:nv===0?C.gold:nv>0?C.success:C.danger,borderRight:`1px solid ${C.border}`}}>{nv===0?"Base":`${nv>0?"+":""}${nv}%`}</td>{caps.map(cr=>{const v2=val(nv,cr);const diff=(v2-base)/base;return<td key={cr} style={{padding:"7px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:11,background:diff>0.05?C.successBg:diff<-0.05?C.dangerBg:"transparent",color:diff>0.1?C.success:diff<-0.1?C.danger:C.text}}>${v2}K</td>;})}</tr>)}</tbody>
-        </table>
+    <div>
+      <div style={{...P,marginBottom:16}}>
+        <SL>Base Case Inputs</SL>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10}}>
+          <UWInput label="Base NOI" value={v.baseNOI} set={s("baseNOI")} prefix="$"/>
+          <UWInput label="Base Price" value={v.basePrice} set={s("basePrice")} prefix="$"/>
+          <UWInput label="Base Rate" value={v.baseRate} set={s("baseRate")} suffix="%"/>
+          <UWInput label="Base LTV" value={v.baseLTV} set={s("baseLTV")} suffix="%"/>
+          <UWInput label="Amortization" value={v.baseAmort} set={s("baseAmort")} suffix="yr"/>
+        </div>
+        <div style={{display:"flex",gap:6,marginTop:14,flexWrap:"wrap"}}>
+          {[["value","Property Value"],["dscr","DSCR"],["coc","Cash-on-Cash"]].map(([id,l])=>(
+            <button key={id} onClick={()=>s("view")(id)} style={{padding:"6px 14px",borderRadius:7,border:`1px solid ${v.view===id?C.borderGold:C.border}`,background:v.view===id?`${C.goldMuted}22`:"transparent",color:v.view===id?C.gold:C.muted,fontSize:11,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{l}</button>
+          ))}
+        </div>
+      </div>
+      {v.view==="value"&&(
+        <div style={P}>
+          <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:14}}>PROPERTY VALUE ($K) — NOI VARIANCE vs CAP RATE</div>
+          <div style={{overflowX:"auto"}}>
+            <table style={{borderCollapse:"collapse",minWidth:500}}>
+              <thead><tr>
+                <th style={{padding:"7px 10px",fontSize:9,color:C.muted,fontWeight:400,textAlign:"left",fontFamily:"'DM Mono',monospace",borderBottom:`1px solid ${C.border}`}}>NOI Δ \ Cap Rate</th>
+                {caps.map(cr=><th key={cr} style={{padding:"7px 10px",fontSize:9,color:C.muted,fontWeight:400,textAlign:"right",fontFamily:"'DM Mono',monospace",borderBottom:`1px solid ${C.border}`}}>{cr}%</th>)}
+              </tr></thead>
+              <tbody>{noiVars.map(nv=>{
+                const adjNOI=baseNOI*(1+nv/100);
+                return<tr key={nv}><td style={{padding:"7px 10px",fontSize:10,fontFamily:"'DM Mono',monospace",color:nv===0?C.gold:nv>0?C.success:C.danger,borderRight:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>{nv===0?"Base":nv>0?`+${nv}%`:`${nv}%`}</td>
+                {caps.map(cr=>{const val=Math.round(adjNOI/(cr/100)/1000);const base=Math.round(baseNOI/(cr/100)/1000);const diff=(val-base)/base;return<td key={cr} style={{padding:"7px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:10,background:diff>0.08?C.successBg:diff<-0.08?C.dangerBg:nv===0&&cr===caps[3]?`${C.goldMuted}18`:"transparent",color:diff>0.15?C.success:diff<-0.15?C.danger:C.text}}>${val}K</td>;})}
+                </tr>;
+              })}</tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      {v.view==="dscr"&&(
+        <div style={P}>
+          <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:14}}>DSCR — INTEREST RATE vs LTV</div>
+          <div style={{overflowX:"auto"}}>
+            <table style={{borderCollapse:"collapse",minWidth:480}}>
+              <thead><tr>
+                <th style={{padding:"7px 10px",fontSize:9,color:C.muted,fontWeight:400,textAlign:"left",fontFamily:"'DM Mono',monospace",borderBottom:`1px solid ${C.border}`}}>Rate \ LTV</th>
+                {ltvs.map(ltv=><th key={ltv} style={{padding:"7px 10px",fontSize:9,color:C.muted,fontWeight:400,textAlign:"right",fontFamily:"'DM Mono',monospace",borderBottom:`1px solid ${C.border}`}}>{ltv}%</th>)}
+              </tr></thead>
+              <tbody>{rates.map(rt=>(
+                <tr key={rt}><td style={{padding:"7px 10px",fontSize:10,fontFamily:"'DM Mono',monospace",color:rt===baseRate?C.gold:C.muted,borderRight:`1px solid ${C.border}`}}>{rt.toFixed(2)}%</td>
+                {ltvs.map(ltv=>{
+                  const l=basePrice*(ltv/100),pmt=monthlyPmt(l,rt,baseAmort),debt=pmt*12;
+                  const dscr=debt>0?baseNOI/debt:0;
+                  const col=dscr>=1.35?C.success:dscr>=1.25?C.goldBright:dscr>=1.10?C.warn:C.danger;
+                  return<td key={ltv} style={{padding:"7px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:10,background:dscr>=1.25?C.successBg:dscr>=1.10?`${C.warn}15`:C.dangerBg,color:col}}>{dscr.toFixed(2)}x</td>;
+                })}</tr>
+              ))}</tbody>
+            </table>
+          </div>
+          <div style={{marginTop:10,display:"flex",gap:12,flexWrap:"wrap"}}>
+            {[[C.successBg,C.success,"≥1.25x — qualifying"],[`${C.warn}15`,C.warn,"1.10–1.25x — marginal"],[C.dangerBg,C.danger,"< 1.10x — fails floor"]].map(([bg,col,label])=>(
+              <div key={label} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:12,height:12,borderRadius:2,background:bg,border:`1px solid ${col}33`}}/><span style={{fontSize:10,color:C.dim}}>{label}</span></div>
+            ))}
+          </div>
+        </div>
+      )}
+      {v.view==="coc"&&(
+        <div style={P}>
+          <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:14}}>CASH-ON-CASH RETURN (%) — NOI VARIANCE vs INTEREST RATE</div>
+          <div style={{overflowX:"auto"}}>
+            <table style={{borderCollapse:"collapse",minWidth:500}}>
+              <thead><tr>
+                <th style={{padding:"7px 10px",fontSize:9,color:C.muted,fontWeight:400,textAlign:"left",fontFamily:"'DM Mono',monospace",borderBottom:`1px solid ${C.border}`}}>NOI Δ \ Rate</th>
+                {rates.map(rt=><th key={rt} style={{padding:"7px 10px",fontSize:9,color:C.muted,fontWeight:400,textAlign:"right",fontFamily:"'DM Mono',monospace",borderBottom:`1px solid ${C.border}`}}>{rt}%</th>)}
+              </tr></thead>
+              <tbody>{noiVars.map(nv=>{
+                const adjNOI=baseNOI*(1+nv/100);
+                const eq=basePrice*(1-baseLTV);
+                return<tr key={nv}><td style={{padding:"7px 10px",fontSize:10,fontFamily:"'DM Mono',monospace",color:nv===0?C.gold:nv>0?C.success:C.danger,borderRight:`1px solid ${C.border}`}}>{nv===0?"Base":nv>0?`+${nv}%`:`${nv}%`}</td>
+                {rates.map(rt=>{
+                  const l=basePrice*baseLTV,pmt=monthlyPmt(l,rt,baseAmort),debt=pmt*12;
+                  const coc=eq>0?(adjNOI-debt)/eq*100:0;
+                  return<td key={rt} style={{padding:"7px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:10,background:coc>=7?C.successBg:coc>=4?`${C.goldMuted}11`:coc>=0?`${C.warn}15`:C.dangerBg,color:coc>=7?C.success:coc>=4?C.goldBright:coc>=0?C.warn:C.danger}}>{coc.toFixed(1)}%</td>;
+                })}</tr>;
+              })}</tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BridgeToPerm() {
+  const [v,sv]=useState({
+    purchasePrice:"2200000",rehabCost:"300000",bridgeRate:"9.50",bridgeLTV:"75",bridgeTerm:"24",
+    stabilizedNOI:"195000",exitCap:"5.75",permRate:"6.75",permLTV:"70",permAmort:"25",permTerm:"10",
+    stabilizationMos:"18",closingCostsPct:"2"
+  });
+  const s=k=>val=>sv(p=>({...p,[k]:val}));
+  const pp=parseFloat(v.purchasePrice)||0,rehab=parseFloat(v.rehabCost)||0;
+  const tdc=pp+rehab;
+  const bridgeLTV=parseFloat(v.bridgeLTV)/100||0.75;
+  const bridgeLoan=tdc*bridgeLTV;
+  const bridgeRate=parseFloat(v.bridgeRate)/100;
+  const bridgeMos=parseInt(v.stabilizationMos)||18;
+  const bridgeInterest=bridgeLoan*bridgeRate*(bridgeMos/12);
+  const bridgeFee=bridgeLoan*0.01;
+  const totalBridgeCost=bridgeInterest+bridgeFee;
+  const stabilizedNOI=parseFloat(v.stabilizedNOI)||0;
+  const exitCap=parseFloat(v.exitCap)/100||0.0575;
+  const arv=exitCap>0?stabilizedNOI/exitCap:0;
+  const permLTV=parseFloat(v.permLTV)/100||0.70;
+  const permLoan=arv*permLTV;
+  const permRate=parseFloat(v.permRate)||6.75,permAmort=parseFloat(v.permAmort)||25;
+  const permPmt=monthlyPmt(permLoan,permRate,permAmort),permDebt=permPmt*12;
+  const permDSCR=permDebt>0?stabilizedNOI/permDebt:0;
+  const permDY=permLoan>0?stabilizedNOI/permLoan*100:0;
+  const cc=arv*(parseFloat(v.closingCostsPct)/100||0.02);
+  const exitEquity=arv-permLoan-cc;
+  const totalEquity=tdc-bridgeLoan;
+  const totalInvested=totalEquity+totalBridgeCost;
+  const gainOnValue=arv-tdc;
+  const em=totalInvested>0?exitEquity/totalInvested:0;
+  const bridgeCoverage=bridgeLoan>0?arv/bridgeLoan:0;
+  return(
+    <div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+        <div style={P}>
+          <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.blue,letterSpacing:".1em",marginBottom:12}}>BRIDGE (ACQUISITION + REHAB)</div>
+          <UWInput label="Purchase Price" value={v.purchasePrice} set={s("purchasePrice")} prefix="$"/>
+          <UWInput label="Rehab / Value-Add Budget" value={v.rehabCost} set={s("rehabCost")} prefix="$"/>
+          <UWInput label="Bridge Rate (interest-only)" value={v.bridgeRate} set={s("bridgeRate")} suffix="%"/>
+          <UWInput label="Bridge LTV (on TDC)" value={v.bridgeLTV} set={s("bridgeLTV")} suffix="%"/>
+          <UWInput label="Stabilization Timeline" value={v.stabilizationMos} set={s("stabilizationMos")} suffix="mo"/>
+        </div>
+        <div style={P}>
+          <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.teal,letterSpacing:".1em",marginBottom:12}}>PERMANENT FINANCING (EXIT)</div>
+          <UWInput label="Stabilized NOI (post-rehab)" value={v.stabilizedNOI} set={s("stabilizedNOI")} prefix="$"/>
+          <UWInput label="Exit Cap Rate" value={v.exitCap} set={s("exitCap")} suffix="%"/>
+          <UWInput label="Perm Rate" value={v.permRate} set={s("permRate")} suffix="%"/>
+          <UWInput label="Perm LTV" value={v.permLTV} set={s("permLTV")} suffix="%"/>
+          <UWInput label="Perm Amortization" value={v.permAmort} set={s("permAmort")} suffix="yr"/>
+          <UWInput label="Closing Costs (exit)" value={v.closingCostsPct} set={s("closingCostsPct")} suffix="%"/>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16}}>
+        <MetricCard label="TOTAL DEV COST" value={fmtD(tdc)} sub={`${fmtD(pp)} + ${fmtD(rehab)} rehab`} color={C.text}/>
+        <MetricCard label="STABILIZED VALUE (ARV)" value={fmtD(arv)} sub={`${v.exitCap}% exit cap`} color={arv>tdc?C.success:C.warn}/>
+        <MetricCard label="VALUE CREATION" value={fmtD(gainOnValue)} sub={`${tdc>0?((gainOnValue/tdc)*100).toFixed(1):0}% on TDC`} color={gainOnValue>0?C.success:C.danger}/>
+        <MetricCard label="PERM LOAN" value={fmtD(permLoan)} sub={`${v.permLTV}% of ARV`} color={permLoan>bridgeLoan?C.success:C.warn}/>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+        <div style={P}>
+          <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:12}}>BRIDGE PHASE ANALYSIS</div>
+          {[["Bridge Loan",fmtD(bridgeLoan)],["Bridge LTV on TDC",`${(bridgeLoan/tdc*100).toFixed(1)}%`],["Interest (IO, "+bridgeMos+"mo)",fmtD(bridgeInterest)],["Origination Fee (1%)",fmtD(bridgeFee)],["Total Bridge Cost",fmtD(totalBridgeCost)],["Equity Required",fmtD(totalEquity)]].map(([l,val])=>(
+            <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
+              <span style={{fontSize:12,color:C.muted}}>{l}</span>
+              <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:C.text}}>{val}</span>
+            </div>
+          ))}
+          <div style={{marginTop:14}}>
+            <StatusPill text={bridgeCoverage>=1.1?"Bridge adequately covered":"Coverage tight — watch LTC"} ok={bridgeCoverage>=1.15} warn={bridgeCoverage>=1.10&&bridgeCoverage<1.15}/>
+          </div>
+        </div>
+        <div style={P}>
+          <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:12}}>PERMANENT LOAN QUALIFICATION</div>
+          {[
+            {l:"Perm Loan Amount",v:fmtD(permLoan),ok:true},
+            {l:"Perm DSCR",v:`${permDSCR.toFixed(2)}x`,ok:permDSCR>=1.25,warn:permDSCR>=1.10},
+            {l:"Perm LTV",v:`${(permLoan/arv*100).toFixed(1)}%`,ok:permLoan/arv<=0.75,warn:permLoan/arv<=0.80},
+            {l:"Debt Yield",v:`${permDY.toFixed(2)}%`,ok:permDY>=9,warn:permDY>=7},
+            {l:"Annual Debt Service",v:fmtD(permDebt),ok:true},
+            {l:"Net Sale Proceeds",v:fmtD(exitEquity),ok:exitEquity>0},
+          ].map(({l,v:val,ok,warn})=>(
+            <div key={l} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
+              <span style={{fontSize:12,color:C.muted}}>{l}</span>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:ok?C.success:warn?C.warn:C.danger}}>{val}</span>
+              </div>
+            </div>
+          ))}
+          <div style={{marginTop:14,background:C.card2,borderRadius:8,padding:"12px 14px"}}>
+            <div style={{fontSize:9,color:C.muted,marginBottom:6,fontFamily:"'DM Mono',monospace"}}>EXIT EQUITY MULTIPLE</div>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:34,fontWeight:700,color:em>=1.5?C.success:em>=1.2?C.goldBright:C.danger}}>{em.toFixed(2)}x</div>
+            <div style={{fontSize:10,color:C.dim,marginTop:3}}>Net proceeds ÷ Total equity invested</div>
+          </div>
+        </div>
       </div>
     </div>
   );
