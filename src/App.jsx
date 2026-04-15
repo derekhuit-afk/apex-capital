@@ -1012,62 +1012,319 @@ function DashHome({isPro,user,setActive}) {
 }
 
 /* ─── HUIT BRAIN ─── */
+/* ─── HUIT BRAIN MODES ─── */
+const HB_MODES = [
+  {id:"general",label:"General Advisor",icon:"🧠",color:"C.blue",desc:"CRE capital markets expert — any question",
+   system:"You are Huit Brain, the AI advisor for HyCRE.ai — a premium CRE capital intelligence platform. You are a senior commercial real estate capital markets expert with 20+ years of experience across debt origination, underwriting, and advisory. Be concise, direct, and expert. Use specific numbers, benchmarks, and real-world examples. Format responses clearly with headers and bullets when appropriate."},
+  {id:"deal",label:"Deal Analyzer",icon:"📋",color:"C.gold",desc:"Analyze any deal — feasibility, structure, risks",
+   system:"You are a senior CRE deal analyst at HyCRE.ai. When analyzing deals, calculate and assess: cap rate, DSCR, LTV, debt yield, cash-on-cash, IRR potential, lender fit, and key risks. Always structure analysis with: Deal Overview, Key Metrics, Strengths, Risks & Concerns, and Recommendation (Fund / Conditional / Pass). Use specific numbers. Flag anything that would cause a lender decline."},
+  {id:"lender",label:"Lender Strategy",icon:"🏦",color:"C.teal",desc:"Who to call, how to pitch, which lender fits",
+   system:"You are a senior CRE capital advisor specializing in lender strategy at HyCRE.ai. Help users identify the right lender type for their deal, how to approach them, what to lead with, and how to structure the pitch. Reference specific lender types: agency (Fannie/Freddie), life companies (MetLife, PGIM, NY Life), national banks (JPMorgan, Wells Fargo, US Bank), CMBS conduits, debt funds (Blackstone, ACORE, Arbor), bridge lenders, SBA lenders, and regional banks. Be specific about lender appetite, rate ranges, typical terms, and what each lender type prioritizes."},
+  {id:"underwriting",label:"Underwriting",icon:"📊",color:"C.purple",desc:"Check numbers, stress test, lender benchmarks",
+   system:"You are a senior CRE underwriter at HyCRE.ai. Help users underwrite deals accurately. Provide specific benchmarks: DSCR floors (1.20x-1.35x by lender type), max LTV by property type and lender, cap rate ranges by market and asset class, debt yield floors (7-10%), breakeven analysis, and stress test guidance. Walk through calculations step by step. Flag any metrics that fall outside typical lender acceptance criteria. Reference real market rates and benchmarks as of 2025."},
+  {id:"outreach",label:"Outreach Coach",icon:"🎯",color:"C.rose",desc:"Scripts, pitches, cold call coaching",
+   system:"You are a senior CRE business development coach at HyCRE.ai. Help users craft compelling outreach to property owners, lenders, and referral sources. Provide specific scripts, email templates, LinkedIn messages, and cold call frameworks. For borrower outreach: lead with the HMDA opportunity, rate gap, maturity risk, or value-add upside. For lender outreach: lead with the deal quality, your relationship, and why it's a fit. Always be specific, professional, and value-led — never generic."},
+  {id:"termsheet",label:"Term Sheet",icon:"📝",color:"C.warn",desc:"Review terms, negotiate, flag risks",
+   system:"You are a senior CRE loan advisor at HyCRE.ai specializing in term sheet review and negotiation. When reviewing terms, assess: interest rate (fixed vs float, spread, index), amortization and IO period, LTV and loan sizing, prepayment (defeasance, step-down, yield maintenance), recourse vs non-recourse and carve-outs, reserves (operating, replacement, capex), extensions, personal guaranty requirements, and covenants. Flag anything unusual, explain what is and isn't negotiable, and provide specific negotiation language."},
+];
+
+const HB_PROMPTS = {
+  general:[
+    {cat:"Fundamentals",qs:["What DSCR do most life companies require for multifamily?","Explain debt yield and why lenders care about it more than LTV","What's the difference between recourse and non-recourse CRE loans?","How does defeasance work and when should I avoid it?"]},
+    {cat:"Markets",qs:["What are current cap rate benchmarks for multifamily nationally?","How has the 10-year Treasury affected CRE lending in 2025?","Which asset classes do lenders favor right now?","What's happening with CMBS spreads?"]},
+    {cat:"Alaska CRE",qs:["What makes Alaska CRE different from the lower-48?","Which lenders actively lend in Alaska?","What cap rates should I expect for Anchorage multifamily?","How does seasonal vacancy affect Alaska MF underwriting?"]},
+  ],
+  deal:[
+    {cat:"Analysis",qs:["Analyze this deal: 12-unit MF, $1.8M, $126K NOI, 70% LTV at 6.75%","What's the max loan on a deal with $200K NOI at 1.25x DSCR, 6.75%, 25yr?","Is a 5.8% cap rate on industrial good in today's market?","Red flag check: office building, 78% occupied, $420K NOI, $5.2M ask"]},
+    {cat:"Feasibility",qs:["How do I know if a deal can support bridge-to-perm financing?","What NOI do I need to support a $3M loan at today's rates?","When does a value-add deal pencil vs. not pencil?","Walk me through a quick back-of-envelope for a $2M acquisition"]},
+  ],
+  lender:[
+    {cat:"Matching",qs:["Best lender type for a $4M stabilized multifamily in Seattle?","Who lends on small-balance CRE under $1M?","Which lenders do interest-only on bridge deals?","Fannie vs Freddie vs HUD — when does each make sense?"]},
+    {cat:"Approach",qs:["How do I cold approach a life company for a $10M deal?","What do lenders want to see in a first submission?","How long does a CMBS deal typically take to close?","What's a debt fund vs a bridge lender — when do I use each?"]},
+  ],
+  underwriting:[
+    {cat:"Calculations",qs:["Calculate max loan: $180K NOI, 1.25x DSCR, 6.75%, 25yr amort","What's the DSCR on $155K NOI with a $1.4M loan at 6.5%?","Stress test this deal to 8% rates: $175K NOI, $1.75M loan, 25yr","What debt yield does a CMBS lender require?"]},
+    {cat:"Benchmarks",qs:["What OER is typical for multifamily in Anchorage?","What vacancy rate do lenders underwrite for retail?","What cap rate should I use for self-storage in a secondary market?","What's a typical replacement reserve per unit for 1990s MF?"]},
+  ],
+  outreach:[
+    {cat:"Borrowers",qs:["Write a cold email to a MF owner whose loan matures in 9 months","How do I open a cold call to a property owner about refinancing?","LinkedIn message to a commercial property owner — best approach?","What's the best hook for a borrower who financed in 2021 at 3.5%?"]},
+    {cat:"Lenders",qs:["How do I introduce a new deal to a lender I've never worked with?","What's the best follow-up after submitting a deal package?","How do I ask for a term sheet without seeming desperate?","Best way to build a lender relationship before you have a deal?"]},
+  ],
+  termsheet:[
+    {cat:"Review",qs:["Explain defeasance vs step-down prepayment — which is better?","What's a fair spread on a 10-year life company loan today?","Is a 3-year IO period on a bridge loan standard?","Red flags in a term sheet I should push back on?"]},
+    {cat:"Negotiate",qs:["How do I push back on a reserve requirement that seems too high?","What recourse carve-outs should I fight to remove?","Is a 1% origination fee standard or is that high?","How do I get a lower spread on a life company term sheet?"]},
+  ],
+};
+
+const CRE_BENCHMARKS = [
+  {label:"Agency MF DSCR",value:"1.25x min",note:"Fannie/Freddie floor"},
+  {label:"Life Co. DSCR",value:"1.30–1.35x",note:"Conservative floors"},
+  {label:"Bridge DSCR",value:"1.10–1.15x",note:"On stabilized NOI"},
+  {label:"CMBS Debt Yield",value:"8–10%+",note:"NOI ÷ Loan Amount"},
+  {label:"10-Yr Treasury",value:"~4.40%",note:"As of Q2 2025"},
+  {label:"SOFR 30-Day",value:"~5.30%",note:"Current"},
+  {label:"CRE Avg Rate",value:"6.50–7.50%",note:"Perm loans"},
+  {label:"MF Cap Rate",value:"5.0–5.8%",note:"Stabilized, major MSA"},
+  {label:"Industrial Cap",value:"5.0–5.5%",note:"Net-leased"},
+  {label:"Retail (NNN)",value:"5.5–6.5%",note:"Investment grade"},
+];
+
 function HuitBrain() {
-  const [messages,setMessages]=useState([{role:"assistant",content:"Welcome to Huit Brain — your 24/7 CRE capital intelligence advisor.\n\nI'm trained on CRE deal structures, lender markets, underwriting methodology, and capital markets. Ask me anything about your deal, a lender, market conditions, or strategy."}]);
+  const [sessions,setSessions]=useState(()=>{try{return JSON.parse(localStorage.getItem("hb_sessions")||"[]");}catch{return[];}});
+  const [activeSession,setActiveSession]=useState(null);
+  const [messages,setMessages]=useState([]);
   const [input,setInput]=useState("");
   const [loading,setLoading]=useState(false);
+  const [mode,setMode]=useState("general");
+  const [dealCtx,setDealCtx]=useState("");
+  const [showDealCtx,setShowDealCtx]=useState(false);
+  const [showHistory,setShowHistory]=useState(false);
+  const [followUps,setFollowUps]=useState([]);
   const bottomRef=useRef(null);
-  useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:"smooth"});},[messages]);
-  const SYSTEM="You are Huit Brain, the AI advisor for HyCRE.ai — a premium CRE capital intelligence platform. You are a senior commercial real estate capital markets expert. Be concise, direct, and expert. Use specific numbers and benchmarks.";
+  const inputRef=useRef(null);
+
+  const currentMode=HB_MODES.find(m=>m.id===mode)||HB_MODES[0];
+  const modeColor={general:C.blue,deal:C.gold,lender:C.teal,underwriting:C.purple,outreach:C.rose,termsheet:C.warn}[mode]||C.blue;
+
+  useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:"smooth"});},[messages,loading]);
+
+  const saveSessions=(s)=>{setSessions(s);try{localStorage.setItem("hb_sessions",JSON.stringify(s));}catch{}};
+
+  const newChat=()=>{
+    setMessages([]);setActiveSession(null);setInput("");setFollowUps([]);setShowDealCtx(false);
+    inputRef.current?.focus();
+  };
+
+  const loadSession=(s)=>{setMessages(s.messages);setActiveSession(s.id);setMode(s.mode||"general");setFollowUps([]);};
+
+  const saveSession=(msgs,sid)=>{
+    const preview=msgs.find(m=>m.role==="user")?.content?.slice(0,60)||"New conversation";
+    if(sid){
+      const updated=sessions.map(s=>s.id===sid?{...s,messages:msgs,preview,updatedAt:Date.now()}:s);
+      saveSessions(updated);
+    } else {
+      const newId=Date.now().toString();
+      const newSession={id:newId,messages:msgs,preview,mode,createdAt:Date.now(),updatedAt:Date.now()};
+      saveSessions([newSession,...sessions.slice(0,19)]);
+      setActiveSession(newId);
+      return newId;
+    }
+    return sid;
+  };
+
+  const deleteSession=(id,e)=>{e.stopPropagation();saveSessions(sessions.filter(s=>s.id!==id));if(activeSession===id)newChat();};
+
+  const buildSystem=()=>{
+    let sys=currentMode.system;
+    if(dealCtx.trim()) sys+=`\n\nACTIVE DEAL CONTEXT (user has provided this deal — reference it in your responses):\n${dealCtx}`;
+    sys+="\n\nFormatting: Use ## for main headers, ### for subheaders, **bold** for key metrics and terms, - for bullet points. Include specific numbers. Be concise but thorough.";
+    return sys;
+  };
+
   const send=async(text)=>{
     const msg=text||input.trim();if(!msg||loading)return;
-    setInput("");
-    const hist=[...messages,{role:"user",content:msg}];
+    setInput("");setFollowUps([]);
+    const hist=[...messages,{role:"user",content:msg,ts:Date.now()}];
     setMessages(hist);setLoading(true);
     try{
-      const reply=await callAI(SYSTEM,msg,messages);
-      setMessages(p=>[...p,{role:"assistant",content:reply}]);
-    }catch{setMessages(p=>[...p,{role:"assistant",content:"Connection error. Please retry."}]);}
+      const reply=await callAI(buildSystem(),msg,messages);
+      const updated=[...hist,{role:"assistant",content:reply,mode,ts:Date.now()}];
+      setMessages(updated);
+      const sid=saveSession(updated,activeSession);
+      if(!activeSession)setActiveSession(sid);
+      // Generate follow-up suggestions
+      genFollowUps(reply,msg);
+    }catch{setMessages(p=>[...p,{role:"assistant",content:"Connection error. Please retry.",ts:Date.now()}]);}
     setLoading(false);
   };
-  const SUGGESTED=["What DSCR do most life companies require for multifamily?","How do I structure a bridge-to-perm deal package?","What makes Alaska CRE different from lower-48 markets?","How should I cold approach a lender on a $3M retail deal?","Explain LTV vs LTC for a value-add deal."];
-  return (
-    <div className="au" style={{display:"flex",gap:18,height:"calc(100vh - 140px)",maxWidth:1060}}>
-      <div style={{flex:1,display:"flex",flexDirection:"column",background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,overflow:"hidden"}}>
-        <div style={{padding:"14px 18px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:34,height:34,borderRadius:9,background:`${C.blue}18`,border:`1px solid ${C.blueBorder}`,display:"flex",alignItems:"center",justifyContent:"center"}}><Brain size={16} color={C.blue}/></div>
-          <div><div style={{fontSize:13,fontWeight:500,color:C.white}}>Huit Brain</div><div style={{fontSize:10,color:C.teal,display:"flex",alignItems:"center",gap:4}}><div style={{width:4,height:4,borderRadius:"50%",background:C.teal,animation:"pulse 2s infinite"}}/>Online · CRE Capital Expert</div></div>
-        </div>
-        <div style={{flex:1,overflow:"auto",padding:18}}>
-          {messages.map((m,i)=>(
-            <div key={i} style={{display:"flex",gap:8,marginBottom:16,justifyContent:m.role==="user"?"flex-end":"flex-start"}}>
-              {m.role==="assistant"&&<div style={{width:28,height:28,borderRadius:7,background:`${C.blue}18`,border:`1px solid ${C.blueBorder}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}><Brain size={13} color={C.blue}/></div>}
-              <div style={{maxWidth:"76%",background:m.role==="user"?`linear-gradient(135deg, ${C.gold}, ${C.goldBright})`:C.card,border:m.role==="user"?"none":`1px solid ${C.border}`,borderRadius:m.role==="user"?"11px 11px 4px 11px":"11px 11px 11px 4px",padding:"10px 14px"}}>
-                <div style={{fontSize:13,color:m.role==="user"?C.bg:C.text,lineHeight:1.75,whiteSpace:"pre-wrap"}}>
-                  {m.content.split('\n').map((line,li)=>{
-                    if(line.startsWith('**')&&line.endsWith('**'))return<div key={li} style={{fontWeight:600,color:m.role==="user"?C.bg:C.white,marginTop:li>0?6:0}}>{line.replace(/\*\*/g,'')}</div>;
-                    if(line.startsWith('- ')||line.startsWith('• '))return<div key={li} style={{paddingLeft:10,marginTop:2}}>· {line.slice(2)}</div>;
-                    return<div key={li}>{line}</div>;
-                  })}
+
+  const genFollowUps=async(reply,question)=>{
+    try{
+      const r=await callAI(
+        "Generate 3 short follow-up questions a CRE professional would ask after this Q&A. Return JSON only: {questions:[\"q1\",\"q2\",\"q3\"]}",
+        `Q: ${question}\nA: ${reply.slice(0,400)}`
+      );
+      const clean=r.replace(/```json|```/g,"").trim();
+      const parsed=JSON.parse(clean);
+      setFollowUps(parsed.questions||[]);
+    }catch{setFollowUps([]);}
+  };
+
+  const copyMsg=(text)=>navigator.clipboard.writeText(text);
+
+  const exportConvo=()=>{
+    const text=messages.map(m=>`${m.role==="user"?"You":"Huit Brain"}: ${m.content}`).join("\n\n---\n\n");
+    navigator.clipboard.writeText(text).then(()=>alert("Conversation copied to clipboard"));
+  };
+
+  const renderMessage=(content,isUser)=>{
+    if(isUser)return<div style={{fontSize:13,color:C.bg,lineHeight:1.7}}>{content}</div>;
+    const lines=content.split('\n');
+    return(
+      <div style={{fontSize:13,color:C.text,lineHeight:1.8}}>
+        {lines.map((line,i)=>{
+          if(line.startsWith('## '))return<div key={i} style={{fontFamily:"'Cormorant Garamond',serif",fontSize:17,color:modeColor,fontWeight:600,margin:"14px 0 5px",borderBottom:`1px solid ${modeColor}22`,paddingBottom:3}}>{line.replace('## ','')}</div>;
+          if(line.startsWith('### '))return<div key={i} style={{fontSize:13,fontWeight:600,color:C.white,margin:"10px 0 4px"}}>{line.replace('### ','')}</div>;
+          if(line.startsWith('- ')||line.startsWith('• '))return<div key={i} style={{paddingLeft:12,margin:"3px 0",display:"flex",gap:7}}><span style={{color:modeColor,flexShrink:0,marginTop:2}}>▸</span><span dangerouslySetInnerHTML={{__html:line.slice(2).replace(/\*\*(.*?)\*\*/g,'<strong style="color:#DDE2EE">$1</strong>')}}/></div>;
+          if(line.match(/^\d+\./))return<div key={i} style={{paddingLeft:12,margin:"3px 0",display:"flex",gap:7}}><span style={{color:modeColor,flexShrink:0,fontWeight:600,minWidth:16}}>{line.match(/^\d+/)[0]}.</span><span dangerouslySetInnerHTML={{__html:line.replace(/^\d+\.\s*/,'').replace(/\*\*(.*?)\*\*/g,'<strong style="color:#DDE2EE">$1</strong>')}}/></div>;
+          if(line==='')return<div key={i} style={{height:6}}/>;
+          return<div key={i} style={{margin:"2px 0"}} dangerouslySetInnerHTML={{__html:line.replace(/\*\*(.*?)\*\*/g,'<strong style="color:#DDE2EE">$1</strong>')}}/>;
+        })}
+      </div>
+    );
+  };
+
+  const prompts=HB_PROMPTS[mode]||HB_PROMPTS.general;
+
+  return(
+    <div className="au" style={{display:"flex",gap:14,height:"calc(100vh - 130px)",maxWidth:1200}}>
+
+      {/* ─── LEFT: History Panel ─── */}
+      <div style={{width:showHistory?200:42,flexShrink:0,display:"flex",flexDirection:"column",gap:8,transition:"width .2s"}}>
+        <button onClick={()=>setShowHistory(s=>!s)} style={{width:"100%",padding:"8px",borderRadius:8,border:`1px solid ${C.border}`,background:C.surface,color:C.muted,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:showHistory?"flex-start":"center",gap:6,fontSize:11,fontFamily:"'DM Sans',sans-serif",transition:"all .2s"}}>
+          <Clock size={13}/>{showHistory&&<span>History</span>}
+        </button>
+        {showHistory&&(
+          <>
+            <button onClick={newChat} style={{...btnGold,padding:"7px 10px",fontSize:11,display:"flex",alignItems:"center",gap:5}}><Zap size={11}/>New Chat</button>
+            <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:5}}>
+              {sessions.length===0&&<p style={{fontSize:10,color:C.dim,textAlign:"center",marginTop:8}}>No history yet</p>}
+              {sessions.map(s=>(
+                <div key={s.id} onClick={()=>loadSession(s)} style={{background:activeSession===s.id?`${C.goldMuted}18`:C.surface,border:`1px solid ${activeSession===s.id?C.borderGold:C.border}`,borderRadius:7,padding:"8px 10px",cursor:"pointer",position:"relative",group:"true"}}>
+                  <div style={{fontSize:10,color:activeSession===s.id?C.gold:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",paddingRight:16}}>{s.preview}</div>
+                  <div style={{fontSize:8,color:C.dim,marginTop:3}}>{new Date(s.createdAt).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</div>
+                  <button onClick={e=>deleteSession(s.id,e)} style={{position:"absolute",top:6,right:6,background:"none",border:"none",color:C.dim,cursor:"pointer",padding:0,opacity:.6,fontSize:10}}>✕</button>
                 </div>
-              </div>
-              {m.role==="user"&&<div style={{width:28,height:28,borderRadius:7,background:`linear-gradient(135deg, ${C.gold}, ${C.goldBright})`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}><User size={13} color={C.bg}/></div>}
+              ))}
             </div>
-          ))}
-          {loading&&<div style={{display:"flex",gap:8,marginBottom:16}}><div style={{width:28,height:28,borderRadius:7,background:`${C.blue}18`,border:`1px solid ${C.blueBorder}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Brain size={13} color={C.blue}/></div><div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:"11px 11px 11px 4px",padding:"12px 14px",display:"flex",gap:5}}>{[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:"50%",background:C.blue,animation:`pulse 1.2s ease ${i*0.2}s infinite`}}/>)}</div></div>}
-          <div ref={bottomRef}/>
-        </div>
-        <div style={{padding:"12px 14px",borderTop:`1px solid ${C.border}`}}>
-          <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
-            <textarea value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}} placeholder="Ask anything about CRE deals, lenders, markets..." rows={2} style={{flex:1,background:C.card,border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 12px",fontSize:13,color:C.text,outline:"none",resize:"none",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}/>
-            <button onClick={()=>send()} disabled={!input.trim()||loading} style={{width:38,height:38,borderRadius:9,background:input.trim()?`linear-gradient(135deg, ${C.blue}, #6AAAF0)`:C.dim,border:"none",cursor:input.trim()?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Send size={14} color={input.trim()?C.white:C.muted}/></button>
+          </>
+        )}
+      </div>
+
+      {/* ─── CENTER: Chat ─── */}
+      <div style={{flex:1,display:"flex",flexDirection:"column",background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,overflow:"hidden",minWidth:0}}>
+        {/* Header */}
+        <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+          <div style={{width:32,height:32,borderRadius:8,background:`${modeColor}18`,border:`1px solid ${modeColor}44`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:16}}>{currentMode.icon}</div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:13,fontWeight:600,color:C.white}}>Huit Brain — {currentMode.label}</div>
+            <div style={{fontSize:10,color:C.teal,display:"flex",alignItems:"center",gap:4}}><div style={{width:4,height:4,borderRadius:"50%",background:C.teal,animation:"pulse 2s infinite"}}/>Online · 24/7 CRE Expert{dealCtx&&<span style={{color:C.gold,marginLeft:6}}>· Deal context active</span>}</div>
+          </div>
+          <div style={{display:"flex",gap:6}}>
+            <button onClick={()=>setShowDealCtx(s=>!s)} style={{padding:"5px 10px",borderRadius:6,border:`1px solid ${showDealCtx?C.borderGold:C.border}`,background:showDealCtx?`${C.goldMuted}18`:"transparent",color:showDealCtx?C.gold:C.muted,fontSize:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:4}}><FileText size={10}/>Deal Context</button>
+            {messages.length>0&&<button onClick={exportConvo} style={{padding:"5px 10px",borderRadius:6,border:`1px solid ${C.border}`,background:"transparent",color:C.muted,fontSize:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:4}}><Download size={10}/>Export</button>}
+            {messages.length>0&&<button onClick={newChat} style={{padding:"5px 10px",borderRadius:6,border:`1px solid ${C.border}`,background:"transparent",color:C.muted,fontSize:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>New Chat</button>}
           </div>
         </div>
+
+        {/* Deal Context Panel */}
+        {showDealCtx&&(
+          <div style={{padding:"10px 16px",borderBottom:`1px solid ${C.borderGold}`,background:`${C.goldMuted}08`}}>
+            <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.gold,letterSpacing:".1em",marginBottom:6}}>ACTIVE DEAL CONTEXT — AI will reference this deal in all responses</div>
+            <textarea value={dealCtx} onChange={e=>setDealCtx(e.target.value)} placeholder="Paste your deal here: address, price, NOI, LTV, loan terms, property type, market, sponsor, anything relevant..." rows={3} style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:7,padding:"8px 10px",fontSize:12,color:C.text,fontFamily:"'DM Sans',sans-serif",resize:"vertical",boxSizing:"border-box",outline:"none",lineHeight:1.5}}/>
+            <div style={{display:"flex",gap:8,marginTop:6}}>
+              <button onClick={()=>setDealCtx("")} style={{background:"none",border:"none",color:C.dim,cursor:"pointer",fontSize:10,fontFamily:"'DM Sans',sans-serif"}}>Clear</button>
+              <button onClick={()=>setShowDealCtx(false)} style={{...btnGold,padding:"4px 12px",fontSize:10}}>Set Context →</button>
+            </div>
+          </div>
+        )}
+
+        {/* Messages */}
+        <div style={{flex:1,overflow:"auto",padding:"16px 18px"}}>
+          {messages.length===0&&(
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",opacity:.7}}>
+              <div style={{fontSize:40,marginBottom:14}}>{currentMode.icon}</div>
+              <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,color:C.white,marginBottom:6}}>Huit Brain — {currentMode.label}</div>
+              <p style={{fontSize:12,color:C.muted,textAlign:"center",maxWidth:400,lineHeight:1.6,marginBottom:20}}>{currentMode.desc}</p>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center",maxWidth:560}}>
+                {(prompts[0]?.qs||[]).slice(0,3).map((q,i)=>(
+                  <button key={i} onClick={()=>send(q)} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 14px",cursor:"pointer",fontSize:11,color:C.muted,lineHeight:1.5,fontFamily:"'DM Sans',sans-serif",maxWidth:180,textAlign:"left"}}>{q}</button>
+                ))}
+              </div>
+            </div>
+          )}
+          {messages.map((m,i)=>(
+            <div key={i} style={{display:"flex",gap:8,marginBottom:14,justifyContent:m.role==="user"?"flex-end":"flex-start",alignItems:"flex-start"}}>
+              {m.role==="assistant"&&<div style={{width:28,height:28,borderRadius:7,background:`${modeColor}18`,border:`1px solid ${modeColor}44`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2,fontSize:14}}>{currentMode.icon}</div>}
+              <div style={{maxWidth:"78%",position:"relative",group:"true"}}>
+                <div style={{background:m.role==="user"?`linear-gradient(135deg,${C.gold},${C.goldBright})`:C.card,border:m.role==="user"?"none":`1px solid ${C.border}`,borderRadius:m.role==="user"?"12px 12px 4px 12px":"12px 12px 12px 4px",padding:"11px 14px"}}>
+                  {renderMessage(m.content,m.role==="user")}
+                </div>
+                {m.role==="assistant"&&<button onClick={()=>copyMsg(m.content)} style={{position:"absolute",top:6,right:6,background:"none",border:"none",color:C.dim,cursor:"pointer",padding:2,opacity:.5,display:"flex",alignItems:"center"}} title="Copy"><Copy size={10}/></button>}
+                {m.ts&&<div style={{fontSize:8,color:C.dim,marginTop:3,textAlign:m.role==="user"?"right":"left"}}>{new Date(m.ts).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}</div>}
+              </div>
+              {m.role==="user"&&<div style={{width:28,height:28,borderRadius:7,background:`linear-gradient(135deg,${C.gold},${C.goldBright})`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}><User size={13} color={C.bg}/></div>}
+            </div>
+          ))}
+          {loading&&(
+            <div style={{display:"flex",gap:8,marginBottom:14,alignItems:"flex-start"}}>
+              <div style={{width:28,height:28,borderRadius:7,background:`${modeColor}18`,border:`1px solid ${modeColor}44`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:14}}>{currentMode.icon}</div>
+              <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:"12px 12px 12px 4px",padding:"12px 16px",display:"flex",gap:5,alignItems:"center"}}>
+                {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:modeColor,animation:`pulse 1.2s ease ${i*0.2}s infinite`}}/>)}
+              </div>
+            </div>
+          )}
+          {/* Follow-up suggestions */}
+          {followUps.length>0&&!loading&&(
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:4,marginBottom:8,paddingLeft:36}}>
+              {followUps.map((q,i)=>(
+                <button key={i} onClick={()=>send(q)} style={{background:`${modeColor}11`,border:`1px solid ${modeColor}33`,borderRadius:6,padding:"5px 10px",cursor:"pointer",fontSize:10,color:modeColor,lineHeight:1.4,fontFamily:"'DM Sans',sans-serif",textAlign:"left"}}>{q}</button>
+              ))}
+            </div>
+          )}
+          <div ref={bottomRef}/>
+        </div>
+
+        {/* Input */}
+        <div style={{padding:"10px 14px",borderTop:`1px solid ${C.border}`}}>
+          <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
+            <textarea ref={inputRef} value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}} placeholder={`Ask Huit Brain anything about ${currentMode.desc.toLowerCase()}...`} rows={2} style={{flex:1,background:C.card,border:`1px solid ${input.trim()?modeColor+"66":C.border}`,borderRadius:9,padding:"9px 12px",fontSize:13,color:C.text,outline:"none",resize:"none",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5,transition:"border-color .2s"}}/>
+            <button onClick={()=>send()} disabled={!input.trim()||loading} style={{width:40,height:40,borderRadius:9,background:input.trim()?`linear-gradient(135deg,${modeColor},${modeColor}CC)`:C.dim,border:"none",cursor:input.trim()?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"background .2s"}}><Send size={14} color={C.white}/></button>
+          </div>
+          <div style={{fontSize:9,color:C.dim,marginTop:5,textAlign:"center"}}>Enter to send · Shift+Enter for new line · AI may make errors — verify critical numbers</div>
+        </div>
       </div>
-      <div style={{width:220,display:"flex",flexDirection:"column",gap:12}}>
-        <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:16,flex:1}}>
-          <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.gold,letterSpacing:".12em",marginBottom:12}}>SUGGESTED</div>
-          {SUGGESTED.map((q,i)=><button key={i} onClick={()=>send(q)} style={{width:"100%",textAlign:"left",background:C.card,border:`1px solid ${C.border}`,borderRadius:7,padding:"9px 11px",cursor:"pointer",fontSize:11,color:C.muted,lineHeight:1.5,transition:"all .15s",fontFamily:"'DM Sans',sans-serif",marginBottom:7}} onMouseEnter={e=>{e.target.style.color=C.text;e.target.style.borderColor=C.borderGold;}} onMouseLeave={e=>{e.target.style.color=C.muted;e.target.style.borderColor=C.border;}}>{q}</button>)}
+
+      {/* ─── RIGHT: Modes + Prompts + Benchmarks ─── */}
+      <div style={{width:210,flexShrink:0,display:"flex",flexDirection:"column",gap:10,overflowY:"auto"}}>
+        {/* Mode Selector */}
+        <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:12}}>
+          <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:8}}>EXPERT MODE</div>
+          {HB_MODES.map(m=>(
+            <button key={m.id} onClick={()=>{setMode(m.id);setFollowUps([]);}} style={{width:"100%",display:"flex",alignItems:"center",gap:7,padding:"7px 8px",borderRadius:7,border:`1px solid ${mode===m.id?C.borderGold:C.border}`,background:mode===m.id?`${C.goldMuted}18`:"transparent",color:mode===m.id?C.white:C.muted,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",marginBottom:5,textAlign:"left",transition:"all .15s"}}>
+              <span style={{fontSize:14}}>{m.icon}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:11,fontWeight:mode===m.id?600:400,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.label}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Quick Prompts */}
+        <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:12,flex:1,overflow:"hidden"}}>
+          <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:8}}>QUICK PROMPTS</div>
+          {prompts.map(cat=>(
+            <div key={cat.cat} style={{marginBottom:10}}>
+              <div style={{fontSize:8,color:modeColor,fontFamily:"'DM Mono',monospace",letterSpacing:".08em",marginBottom:5}}>{cat.cat.toUpperCase()}</div>
+              {cat.qs.map((q,i)=>(
+                <button key={i} onClick={()=>send(q)} style={{width:"100%",textAlign:"left",background:C.card,border:`1px solid ${C.border}`,borderRadius:6,padding:"7px 9px",cursor:"pointer",fontSize:10,color:C.muted,lineHeight:1.5,fontFamily:"'DM Sans',sans-serif",marginBottom:4,display:"block"}} onMouseEnter={e=>{e.target.style.color=C.text;e.target.style.borderColor=modeColor+"66";}} onMouseLeave={e=>{e.target.style.color=C.muted;e.target.style.borderColor=C.border;}}>{q}</button>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {/* Market Benchmarks */}
+        <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:12}}>
+          <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:8}}>CRE BENCHMARKS</div>
+          {CRE_BENCHMARKS.map((b,i)=>(
+            <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6,paddingBottom:6,borderBottom:i<CRE_BENCHMARKS.length-1?`1px solid ${C.border}`:"none"}}>
+              <div>
+                <div style={{fontSize:9,color:C.dim,marginBottom:1}}>{b.label}</div>
+                <div style={{fontSize:8,color:C.dim,opacity:.6}}>{b.note}</div>
+              </div>
+              <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,fontWeight:600,color:C.goldBright,textAlign:"right"}}>{b.value}</div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
