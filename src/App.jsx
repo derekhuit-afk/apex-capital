@@ -908,7 +908,7 @@ const DASH_NAV = [
   {id:"advisor",icon:Brain,label:"Huit Brain AI",badge:"AI",color:C.blue},
   {id:"masterclass",icon:BookOpen,label:"MasterClass",badge:"NEW"},
   {id:"market",icon:Activity,label:"Market Intel",badge:"LIVE",color:C.teal},
-  {id:"prospecting",icon:Target,label:"HMDA Prospecting",badge:"NEW"},
+  {id:"prospecting",icon:Target,label:"Client Acquisition",badge:"NEW"},
   {id:"packager",icon:FileText,label:"Deal Packager"},
   {id:"underwriting",icon:BarChart3,label:"Underwriting Suite"},
   {id:"lenders",icon:Database,label:"Lender Engine"},
@@ -1381,103 +1381,526 @@ function MarketFeed() {
 }
 
 /* ─── PROSPECTING ENGINE ─── */
+const PIPELINE_STAGES = [
+  {id:"new",label:"New Lead",color:C.blue,prob:5},
+  {id:"contacted",label:"Contacted",color:C.teal,prob:15},
+  {id:"engaged",label:"Engaged",color:C.gold,prob:30},
+  {id:"meeting",label:"Meeting Set",color:C.purple,prob:55},
+  {id:"proposal",label:"Proposal Sent",color:C.warn,prob:75},
+  {id:"closed",label:"Closed",color:C.success,prob:100},
+];
+const CHANNELS=[
+  {id:"email",label:"Email",icon:"✉️"},
+  {id:"linkedin",label:"LinkedIn",icon:"💼"},
+  {id:"phone",label:"Cold Call Script",icon:"📞"},
+  {id:"sms",label:"SMS",icon:"💬"},
+];
+const HMDA_STATES=["AK","WA","OR","CA","TX","CO","FL","NY","GA","NC","MT","ID","AZ","NV","TN","TN"];
+const TOUCH_COUNTS=[
+  {id:1,label:"1-Touch Teaser"},
+  {id:3,label:"3-Touch Standard"},
+  {id:5,label:"5-Touch Campaign"},
+];
+
 function ProspectingEngine() {
-  const [filters,setFilters]=useState({propType:"Multifamily",state:"AK",minLoan:"500000",maxLoan:"5000000",year:"2024"});
+  const [tab,setTab]=useState("search"); // search | outreach | pipeline | analytics
+  const [filters,setFilters]=useState({propType:"Multifamily",state:"AK",minLoan:"500000",maxLoan:"5000000",year:"2023",count:"20"});
   const [prospects,setProspects]=useState([]);
+  const [loading,setLoading]=useState(false);
   const [searched,setSearched]=useState(false);
   const [selected,setSelected]=useState([]);
+  const [pipeline,setPipeline]=useState(()=>{try{return JSON.parse(localStorage.getItem("hycre_pipeline")||"[]");}catch{return[];}});
   const [outreach,setOutreach]=useState(null);
   const [oLoading,setOLoading]=useState(false);
+  const [channel,setChannel]=useState("email");
+  const [touches,setTouches]=useState(3);
+  const [tone,setTone]=useState("professional");
+  const [myValue,setMyValue]=useState("better rates, higher LTV, and non-recourse structures through HyCRE.ai");
   const [detail,setDetail]=useState(null);
+  const [copiedOut,setCopiedOut]=useState(false);
   const ff=k=>v=>setFilters(p=>({...p,[k]:v}));
-  const STATES=["AK","WA","OR","CA","TX","CO","FL","NY","GA","NC","TN","AZ"];
-  const names=["Summit Properties LLC","Pacific Ridge Capital","Northern Star Holdings","Meridian Asset Group","Cascade Real Estate Partners","Alpine Capital LLC","Denali Holdings","BlueSky Property Group","Coastal Ventures Inc","Heritage CRE Fund","Frontier Assets","Keystone Properties","Harbor Light Capital","Mountain View Developments","Clearwater CRE"];
-  const search=()=>{
-    const stateCities={AK:["Anchorage","Fairbanks","Juneau","Wasilla"],WA:["Seattle","Tacoma","Spokane","Bellevue"],TX:["Dallas","Austin","Houston","San Antonio"],FL:["Miami","Tampa","Orlando","Jacksonville"]};
-    const cities=stateCities[filters.state]||["Metro Area","Downtown","Eastside","Westside"];
-    const pp=Array.from({length:15},(_,i)=>({id:i+1,name:names[i],propType:filters.propType==="All"?["Multifamily","Office","Retail","Industrial"][i%4]:filters.propType,state:filters.state,city:cities[i%cities.length],loanAmt:Math.round((parseFloat(filters.minLoan)+Math.random()*(parseFloat(filters.maxLoan)-parseFloat(filters.minLoan)))/100000)*100000,year:filters.year,lender:["Wells Fargo","Chase","Freddie Mac","Fannie Mae","Local Bank","Private","CMBS"][i%7],apexScore:Math.floor(Math.random()*35)+55,contact:`info@${names[i].toLowerCase().replace(/[^a-z]/g,"")}.com`,phone:`(${Math.floor(Math.random()*800)+200}) 555-0${String(Math.floor(Math.random()*100)).padStart(3,"0")}`,status:["Hot","Warm","Cold"][i%3]}));
-    setProspects(pp);setSearched(true);setSelected([]);setOutreach(null);
+
+  const savePipeline=(p)=>{setPipeline(p);try{localStorage.setItem("hycre_pipeline",JSON.stringify(p));}catch{}};
+
+  // Search prospects
+  const search=async()=>{
+    setLoading(true);setSearched(true);setSelected([]);setOutreach(null);
+    try{
+      const params=new URLSearchParams({action:"search",...filters});
+      const r=await fetch(`/api/prospects?${params}`);
+      const d=await r.json();
+      setProspects(d.prospects||[]);
+    }catch{
+      // Fallback: generate client-side if API fails
+      setProspects(generateLocal(filters));
+    }
+    setLoading(false);
   };
-  const toggle=id=>setSelected(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
+
+  // Local fallback generator
+  const generateLocal=(f)=>{
+    const cities={AK:["Anchorage","Fairbanks","Juneau","Wasilla","Palmer"],WA:["Seattle","Tacoma","Bellevue","Spokane"],TX:["Dallas","Austin","Houston","San Antonio"],FL:["Miami","Tampa","Orlando","Jacksonville"],OR:["Portland","Eugene","Salem","Bend"],CO:["Denver","Boulder","Fort Collins","Aurora"],CA:["Los Angeles","San Diego","San Francisco","Sacramento"]};
+    const lenders=["Wells Fargo","JPMorgan Chase","Fannie Mae (DUS)","Berkadia","Walker & Dunlop","Pacific Premier Bank","KeyBank","U.S. Bank","Northrim Bank","Alaska USA FCU","CMBS Conduit","Bridge Fund","Arbor Realty","Ready Capital"];
+    const pfx=["Summit","Pacific","Northern","Alpine","Denali","Cascade","Pioneer","Heritage","Frontier","Landmark","Meridian","Premier","Clearwater","BlueSky","Anchor","Arctic","Eagle","Mesa","Ridge","Harbor"];
+    const sfx=["LLC","LP","Holdings","Capital","Properties","Group","Ventures","Investments","Partners","Fund"];
+    const ct=cities[f.state]||cities.AK,min=parseFloat(f.minLoan)||500000,max=parseFloat(f.maxLoan)||5000000;
+    const yr=parseInt(f.year)||2023;
+    const origRate={2017:4.2,2018:4.8,2019:4.1,2020:3.5,2021:3.2,2022:5.8,2023:7.1,2024:6.9}[yr]||6.5;
+    const pts=["Multifamily","Office","Retail","Industrial","Hotel","Self-Storage","Mixed-Use"];
+    const count=parseInt(f.count)||20;
+    return Array.from({length:count},(_,i)=>{
+      const p1=pfx[Math.floor(Math.random()*pfx.length)],p2=pfx[Math.floor(Math.random()*pfx.length)],st=sfx[Math.floor(Math.random()*sfx.length)];
+      const pType=f.propType==="All"?pts[i%pts.length]:f.propType;
+      const loanAmt=Math.round((min+Math.random()*(max-min))/50000)*50000;
+      const lender=lenders[Math.floor(Math.random()*lenders.length)];
+      const rateGap=parseFloat((6.85-origRate).toFixed(2));
+      const ageScore=yr<=2022?30:10,rateScore=Math.min(Math.abs(rateGap)*8,25),sizeScore=loanAmt>=2000000?20:15,typeScore=["Multifamily","Industrial"].includes(pType)?10:5;
+      const refiScore=Math.min(Math.round(ageScore+rateScore+sizeScore+typeScore+Math.random()*10),100);
+      const oppType=yr<=2021?"Maturity Risk / Refi":yr<=2022?"Rate & Term Refi":"Bridge / Refinance";
+      return{id:i+1,company:`${p1} ${p2} ${st}`,propType:pType,state:f.state,city:ct[i%ct.length],loanAmt,lender,year:f.year,origRate,rateGap,oppType,refiScore,priority:refiScore>=70?"Hot":refiScore>=50?"Warm":"Cold",stage:"new",notes:"",lastContacted:null};
+    }).sort((a,b)=>b.refiScore-a.refiScore);
+  };
+
+  const toggle=(id)=>setSelected(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
+  const selectAll=()=>setSelected(selected.length===prospects.length?[]:prospects.map(p=>p.id));
+
   const genOutreach=async()=>{
-    const p=prospects.find(p=>selected.includes(p.id));if(!p)return;
-    setOLoading(true);setOutreach(null);
-    try{const r=await callAI("You are a CRE capital finder writing outreach sequences. Generate a 3-touch sequence (Email 1, LinkedIn DM, Email 2 Follow-up). Include subject lines. Be specific and professional, not salesy.","Write a 3-touch outreach to: "+p.name+", who had a "+p.propType+" loan of $"+p.loanAmt.toLocaleString()+" in "+p.city+", "+p.state+" ("+p.year+" HMDA, financed by "+p.lender+"). I'm a CRE capital finder with HyCRE.ai offering better rates, higher LTV, and non-recourse structures.");setOutreach(r);}
-    catch{setOutreach("Error generating sequence.");}
+    const sel=prospects.filter(p=>selected.includes(p.id));
+    if(!sel.length)return;
+    setOLoading(true);setOutreach(null);setTab("outreach");
+    const p=sel[0];
+    const touchLabels={email:["Cold Opener","Value Add","Social Proof","Final Follow-Up","Break-Up"],linkedin:["Connection Request + Note","First DM","Value Message","Check-In","Last Attempt"],phone:["Cold Call Script","Follow-Up Call","Voicemail Script","Final Call","Close Attempt"],sms:["Intro Text","Value Text","Follow-Up Text","Meeting Request","Final Text"]};
+    const channelGuide={email:"Write professional email with subject line (SUBJECT: ...) then body. Each email 100-150 words max.",linkedin:"Write LinkedIn message. 300 char max for connection note, 500 for DMs. Natural, not salesy.",phone:"Write word-for-word call script with opening, value prop, objection handlers, and close. Include [PAUSE] markers.",sms:"Write SMS text. Under 160 chars. Direct, professional, value-focused."};
+    const toneGuide={professional:"Formal, authoritative, institutional quality",consultative:"Advisor tone, asking questions, value-focused",urgent:"Time-sensitive, maturity/rate concern driven",casual:"Friendly, direct, peer-to-peer"};
+
+    try{
+      const r=await callAI(
+        `You are a senior CRE capital finder writing a ${touches}-touch ${channel} outreach sequence. ${channelGuide[channel]} Tone: ${toneGuide[tone]}. Generate exactly ${touches} messages labeled clearly as TOUCH 1, TOUCH 2, etc.`,
+        `Prospect: ${p.company}
+Property: ${p.propType} in ${p.city}, ${p.state}
+Loan: $${p.loanAmt.toLocaleString()} originated in ${p.year} by ${p.lender}
+Original Rate: ${p.origRate}% — Market Rate Today: 6.85% — Gap: ${p.rateGap > 0 ? '+' : ''}${p.rateGap}%
+Opportunity Type: ${p.oppType}
+Refi Score: ${p.refiScore}/100 (${p.priority})
+
+My Value Proposition: ${myValue}
+
+Generate ${touches} ${channel} messages. ${touches > 1 ? `Space them out: Touch 1 (Day 1), Touch 2 (Day ${touches>=3?5:3}${touches>=3?', Touch 3 (Day 10)':''}${touches>=4?', Touch 4 (Day 18)':''}${touches>=5?', Touch 5 (Day 28)':''}).` : ''}
+
+Label each as:
+## TOUCH [N] — [Label] (Day X)${channel==="email"?"\\nSUBJECT: [subject line]\\n":""}
+[message body]`
+      );
+      setOutreach({text:r,prospect:p,channel,touches,generated:new Date().toISOString()});
+    }catch{setOutreach({text:"Error generating sequence. Please try again.",prospect:p,channel,touches});}
     setOLoading(false);
   };
-  const SC={Hot:C.danger,Warm:C.gold,Cold:C.muted};
-  return (
-    <div className="au" style={{maxWidth:1100}}>
-      <h2 style={H2}>HMDA Prospecting Engine</h2>
-      <p style={{...Sub,marginBottom:22}}>Filter HMDA records to find CRE owners ready for new capital. Generate AI outreach sequences in one click.</p>
-      <div style={{display:"grid",gridTemplateColumns:"260px 1fr",gap:18}}>
+
+  const addToPipeline=(p)=>{
+    if(pipeline.find(x=>x.id===p.id))return;
+    const newPipeline=[...pipeline,{...p,stage:"new",addedAt:new Date().toISOString(),notes:"",lastContacted:null}];
+    savePipeline(newPipeline);
+  };
+  const addSelectedToPipeline=()=>{prospects.filter(p=>selected.includes(p.id)).forEach(addToPipeline);};
+  const updateStage=(id,stage)=>savePipeline(pipeline.map(p=>p.id===id?{...p,stage}:p));
+  const removeFromPipeline=(id)=>savePipeline(pipeline.filter(p=>p.id!==id));
+  const updateNotes=(id,notes)=>savePipeline(pipeline.map(p=>p.id===id?{...p,notes}:p));
+  const markContacted=(id)=>savePipeline(pipeline.map(p=>p.id===id?{...p,lastContacted:new Date().toISOString(),stage:p.stage==="new"?"contacted":p.stage}:p));
+
+  // Analytics
+  const pipelineValue=pipeline.reduce((s,p)=>{const stg=PIPELINE_STAGES.find(st=>st.id===p.stage);return s+(p.loanAmt||0)*(stg?.prob||5)/100;},0);
+  const projectedFees=pipelineValue*0.01;
+  const stageBreakdown=PIPELINE_STAGES.map(st=>({...st,count:pipeline.filter(p=>p.stage===st.id).length,value:pipeline.filter(p=>p.stage===st.id).reduce((s,p)=>s+(p.loanAmt||0),0)}));
+
+  // CSV export
+  const exportCSV=(rows)=>{
+    const cols=["Company","Property Type","City","State","Loan Amount","Lender","Year","Orig Rate","Opp Type","Refi Score","Priority","Stage"];
+    const csv=cols.join(",")+"\n"+rows.map(p=>[p.company,p.propType,p.city,p.state,p.loanAmt,p.lender,p.year,p.origRate,p.oppType,p.refiScore,p.priority,p.stage||""].join(",")).join("\n");
+    navigator.clipboard.writeText(csv).then(()=>alert("CSV copied to clipboard"));
+  };
+
+  const PC={Hot:C.danger,Warm:C.gold,Cold:C.muted};
+
+  return(
+    <div className="au" style={{maxWidth:1140}}>
+      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:12,marginBottom:20}}>
         <div>
-          <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:18,marginBottom:14}}>
-            <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.teal,letterSpacing:".12em",marginBottom:12}}>HMDA FILTERS</div>
-            <div style={{marginBottom:11}}><FL l="Property Type"/><Sel val={filters.propType} set={ff("propType")} opts={["All","Multifamily","Office","Retail","Industrial","Hotel","Mixed-Use","Self-Storage"]}/></div>
-            <div style={{marginBottom:11}}><FL l="State"/><Sel val={filters.state} set={ff("state")} opts={STATES}/></div>
-            <div style={{marginBottom:11}}><FL l="Min Loan ($)"/><Inp val={filters.minLoan} set={ff("minLoan")} ph="500,000" mono/></div>
-            <div style={{marginBottom:11}}><FL l="Max Loan ($)"/><Inp val={filters.maxLoan} set={ff("maxLoan")} ph="5,000,000" mono/></div>
-            <div style={{marginBottom:18}}><FL l="HMDA Year"/><Sel val={filters.year} set={ff("year")} opts={["2024","2023","2022","2021","2020","2019","2018","2017"]}/></div>
-            <button onClick={search} style={{...btnGold,width:"100%",padding:"10px 0",display:"flex",alignItems:"center",justifyContent:"center",gap:7,fontSize:13}}><Search size={13}/>Search Records</button>
-            {searched&&<p style={{fontSize:10,color:C.success,textAlign:"center",marginTop:8}}>✓ {prospects.length} records found</p>}
-          </div>
-          {searched&&selected.length>0&&<div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:16}}>
-            <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.gold,letterSpacing:".12em",marginBottom:10}}>{selected.length} SELECTED</div>
-            <button onClick={genOutreach} disabled={oLoading} style={{...btnGold,width:"100%",padding:"9px 0",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><Zap size={12}/>{oLoading?"Generating...":"Generate Outreach"}</button>
-            <button onClick={()=>setSelected([])} style={{...btnOutline,width:"100%",padding:"7px 0",fontSize:11,marginTop:8}}>Clear</button>
-          </div>}
+          <h2 style={H2}>Client Acquisition Engine</h2>
+          <p style={{...Sub,marginBottom:0}}>HMDA-powered CRE prospect search, multi-channel outreach sequences, and pipeline management.</p>
         </div>
-        <div>
-          {!searched?<div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:380,opacity:.5}}><Database size={36} color={C.muted} style={{marginBottom:10}}/><p style={{color:C.muted,fontSize:13}}>Set filters and search</p></div>:(
-            <>
-              <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden",marginBottom:outreach?18:0}}>
-                <table style={{width:"100%",borderCollapse:"collapse"}}>
-                  <thead><tr style={{borderBottom:`1px solid ${C.border}`,background:C.card}}><th style={{width:32,padding:"9px 12px"}}/>{["Company","Type","Location","Loan Amount","APEX","Status",""].map(h=><th key={h} style={{padding:"9px 10px",textAlign:h==="Loan Amount"||h==="APEX"?"right":"left",fontSize:9,color:C.muted,fontWeight:400,fontFamily:"'DM Mono',monospace"}}>{h}</th>)}</tr></thead>
-                  <tbody>
-                    {prospects.map((p,i)=>{
-                      const sel=selected.includes(p.id);
-                      const sc=p.apexScore>=75?C.success:p.apexScore>=60?C.goldBright:C.warn;
-                      return<tr key={p.id} style={{borderBottom:`1px solid ${C.border}`,background:sel?`${C.goldMuted}0E`:"transparent"}}>
-                        <td style={{padding:"9px 12px"}}><div onClick={()=>toggle(p.id)} style={{width:15,height:15,borderRadius:3,border:`1.5px solid ${sel?C.gold:C.border}`,background:sel?C.gold:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>{sel&&<Check size={9} color={C.bg}/>}</div></td>
-                        <td style={{padding:"9px 10px",fontSize:11,color:C.text,maxWidth:140,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</td>
-                        <td style={{padding:"9px 10px",fontSize:10,color:C.muted}}>{p.propType}</td>
-                        <td style={{padding:"9px 10px",fontSize:10,color:C.muted}}>{p.city}, {p.state}</td>
-                        <td style={{padding:"9px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:10,color:C.text}}>${(p.loanAmt/1000).toFixed(0)}K</td>
-                        <td style={{padding:"9px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:11,color:sc}}>{p.apexScore}</td>
-                        <td style={{padding:"9px 10px"}}><span style={{fontSize:8,fontFamily:"'DM Mono',monospace",padding:"2px 6px",borderRadius:3,background:`${SC[p.status]}14`,color:SC[p.status]}}>{p.status}</span></td>
-                        <td style={{padding:"9px 10px"}}><button onClick={()=>setDetail(p)} style={{...btnOutline,padding:"3px 9px",fontSize:10}}>View</button></td>
-                      </tr>;
-                    })}
-                  </tbody>
-                </table>
+        {pipeline.length>0&&<div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <span style={{fontSize:11,color:C.muted}}>{pipeline.length} in pipeline</span>
+          <span style={{fontSize:11,color:C.gold,fontFamily:"'DM Mono',monospace"}}>${Math.round(projectedFees/1000)}K projected fees</span>
+        </div>}
+      </div>
+
+      {/* Tab nav */}
+      <div style={{display:"flex",gap:4,background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:4,marginBottom:20,overflowX:"auto"}}>
+        {[["search","🔍 Prospect Search"],["outreach","✉️ Outreach Studio"],["pipeline","📊 Pipeline"],["analytics","📈 Analytics"]].map(([v,l])=>(
+          <button key={v} onClick={()=>setTab(v)} style={{padding:"8px 18px",borderRadius:7,border:"none",background:tab===v?C.card:"transparent",color:tab===v?C.goldBright:C.muted,fontSize:12,fontWeight:tab===v?600:400,cursor:"pointer",whiteSpace:"nowrap",fontFamily:"'DM Sans',sans-serif",transition:"all .15s"}}>
+            {l}{v==="pipeline"&&pipeline.length>0&&<span style={{marginLeft:5,fontSize:9,background:`${C.goldMuted}33`,color:C.gold,padding:"1px 5px",borderRadius:3,fontFamily:"'DM Mono',monospace"}}>{pipeline.length}</span>}
+          </button>
+        ))}
+      </div>
+
+      {/* ─── SEARCH TAB ─── */}
+      {tab==="search"&&(
+        <div style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:18}}>
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <div style={P}>
+              <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.teal,letterSpacing:".12em",marginBottom:12}}>HMDA FILTERS</div>
+              <div style={{marginBottom:10}}><FL l="Property Type"/><Sel val={filters.propType} set={ff("propType")} opts={["All","Multifamily","Office","Retail","Industrial","Hotel","Self-Storage","Mixed-Use"]}/></div>
+              <div style={{marginBottom:10}}><FL l="State"/>
+                <select value={filters.state} onChange={e=>ff("state")(e.target.value)} style={{...IS,width:"100%"}}>
+                  {HMDA_STATES.map(s=><option key={s} value={s}>{s}</option>)}
+                </select>
               </div>
-              {(outreach||oLoading)&&<div style={{background:C.surface,border:`1px solid ${C.borderGold}`,borderRadius:14,padding:22}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}><Mail size={15} color={C.gold}/><span style={{fontSize:13,fontWeight:500,color:C.white}}>AI Outreach Sequence</span><span style={{fontSize:8,fontFamily:"'DM Mono',monospace",padding:"2px 6px",borderRadius:3,background:`${C.goldMuted}2A`,color:C.gold}}>3-TOUCH</span></div>
-                {oLoading?<div style={{display:"flex",alignItems:"center",gap:8,padding:"16px 0"}}><div style={{width:18,height:18,border:`2px solid ${C.borderGold}`,borderTopColor:C.goldBright,borderRadius:"50%",animation:"spin 1s linear infinite"}}/><span style={{color:C.muted,fontSize:12}}>Generating personalized sequence...</span></div>
-                :<div>
-                  <div style={{fontSize:12,color:C.text,lineHeight:1.8,whiteSpace:"pre-wrap"}}>
-                    {outreach?.split('\n').map((line,i)=>{
-                      if(line.match(/^(Email|LinkedIn|Touch|Step|Follow)/i))return<div key={i} style={{fontFamily:"'Cormorant Garamond',serif",fontSize:16,color:C.gold,marginTop:i>0?18:0,marginBottom:5,fontWeight:600}}>{line}</div>;
-                      if(line.startsWith('Subject:'))return<div key={i} style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:C.blue,marginBottom:5}}>{line}</div>;
-                      return<p key={i}>{line}</p>;
-                    })}
+              <div style={{marginBottom:10}}><FL l="Min Loan ($)"/><Inp val={filters.minLoan} set={ff("minLoan")} ph="500000" mono/></div>
+              <div style={{marginBottom:10}}><FL l="Max Loan ($)"/><Inp val={filters.maxLoan} set={ff("maxLoan")} ph="5000000" mono/></div>
+              <div style={{marginBottom:10}}><FL l="HMDA Year"/><Sel val={filters.year} set={ff("year")} opts={["2024","2023","2022","2021","2020","2019","2018","2017"]}/></div>
+              <div style={{marginBottom:14}}><FL l="Results Count"/><Sel val={filters.count} set={ff("count")} opts={["10","20","30","50"]}/></div>
+              <button onClick={search} disabled={loading} style={{...btnGold,width:"100%",padding:"10px 0",display:"flex",alignItems:"center",justifyContent:"center",gap:7,fontSize:13}}>
+                {loading?<><div style={{width:12,height:12,border:`2px solid ${C.bg}55`,borderTopColor:C.bg,borderRadius:"50%",animation:"spin 1s linear infinite"}}/>Searching...</>:<><Search size={13}/>Search Records</>}
+              </button>
+              {searched&&!loading&&<p style={{fontSize:10,color:C.success,textAlign:"center",marginTop:8}}>✓ {prospects.length} records found</p>}
+            </div>
+
+            {selected.length>0&&(
+              <div style={{background:`${C.goldMuted}11`,border:`1px solid ${C.borderGold}`,borderRadius:12,padding:14}}>
+                <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.gold,letterSpacing:".1em",marginBottom:10}}>{selected.length} SELECTED</div>
+                <button onClick={()=>{genOutreach();}} style={{...btnGold,width:"100%",padding:"9px 0",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginBottom:8}}><Zap size={12}/>Generate Outreach</button>
+                <button onClick={addSelectedToPipeline} style={{...btnOutline,width:"100%",padding:"7px 0",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",gap:5,marginBottom:8}}><Target size={11}/>Add to Pipeline</button>
+                <button onClick={()=>exportCSV(prospects.filter(p=>selected.includes(p.id)))} style={{...btnOutline,width:"100%",padding:"7px 0",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",gap:5,marginBottom:8}}><Download size={11}/>Export CSV</button>
+                <button onClick={()=>setSelected([])} style={{background:"none",border:"none",color:C.dim,cursor:"pointer",fontSize:11,width:"100%",fontFamily:"'DM Sans',sans-serif"}}>Clear selection</button>
+              </div>
+            )}
+          </div>
+
+          <div>
+            {!searched&&!loading&&(
+              <div style={{...P,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:420,opacity:.5}}>
+                <Target size={40} color={C.muted} style={{marginBottom:12}}/>
+                <p style={{color:C.muted,fontSize:14,fontWeight:500}}>Set filters and search HMDA records</p>
+                <p style={{color:C.dim,fontSize:11,marginTop:4}}>Find CRE owners with refi opportunity based on loan age and rate gap</p>
+              </div>
+            )}
+            {loading&&(
+              <div style={{...P,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:320}}>
+                <div style={{width:28,height:28,border:`2px solid ${C.borderGold}`,borderTopColor:C.goldBright,borderRadius:"50%",animation:"spin 1s linear infinite",marginBottom:12}}/>
+                <p style={{color:C.muted,fontSize:13}}>Querying HMDA records...</p>
+              </div>
+            )}
+            {searched&&!loading&&prospects.length>0&&(
+              <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden"}}>
+                <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:10}}>
+                  <div onClick={selectAll} style={{width:15,height:15,borderRadius:3,border:`1.5px solid ${selected.length===prospects.length?C.gold:C.border}`,background:selected.length===prospects.length?C.gold:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    {selected.length===prospects.length&&<Check size={9} color={C.bg}/>}
                   </div>
-                  <div style={{marginTop:16,display:"flex",gap:10}}><button style={{...btnGold,padding:"7px 18px",fontSize:11,display:"flex",alignItems:"center",gap:5}}><Download size={11}/>Export to CRM</button><button onClick={genOutreach} style={{...btnOutline,padding:"7px 14px",fontSize:11,display:"flex",alignItems:"center",gap:5}}><RefreshCw size={10}/>Regenerate</button></div>
-                </div>}
-              </div>}
+                  <span style={{fontSize:10,color:C.dim}}>{selected.length>0?`${selected.length} selected`:""}</span>
+                  <div style={{marginLeft:"auto",display:"flex",gap:8}}>
+                    <span style={{fontSize:10,color:C.dim}}>Sorted by Refi Score ↓</span>
+                  </div>
+                </div>
+                <div style={{overflowX:"auto"}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",minWidth:700}}>
+                    <thead><tr style={{borderBottom:`1px solid ${C.border}`,background:C.card}}>
+                      <th style={{width:32,padding:"8px 12px"}}/>
+                      {["Company","Type","Location","Loan Amount","Orig Rate","Opportunity","Score","Priority",""].map(h=>(
+                        <th key={h} style={{padding:"8px 10px",textAlign:["Loan Amount","Score"].includes(h)?"right":"left",fontSize:9,color:C.muted,fontWeight:400,fontFamily:"'DM Mono',monospace"}}>{h}</th>
+                      ))}
+                    </tr></thead>
+                    <tbody>
+                      {prospects.map(p=>{
+                        const sel=selected.includes(p.id);
+                        const sc=p.refiScore>=70?C.success:p.refiScore>=50?C.goldBright:C.warn;
+                        const inPipe=pipeline.find(x=>x.id===p.id);
+                        return(
+                          <tr key={p.id} style={{borderBottom:`1px solid ${C.border}`,background:sel?`${C.goldMuted}0E`:"transparent"}}>
+                            <td style={{padding:"8px 12px"}}><div onClick={()=>toggle(p.id)} style={{width:15,height:15,borderRadius:3,border:`1.5px solid ${sel?C.gold:C.border}`,background:sel?C.gold:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>{sel&&<Check size={9} color={C.bg}/>}</div></td>
+                            <td style={{padding:"8px 10px",fontSize:11,color:C.text,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.company}</td>
+                            <td style={{padding:"8px 10px",fontSize:10,color:C.muted}}>{p.propType}</td>
+                            <td style={{padding:"8px 10px",fontSize:10,color:C.muted}}>{p.city}, {p.state}</td>
+                            <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:10,color:C.text}}>${Math.round(p.loanAmt/1000)}K</td>
+                            <td style={{padding:"8px 10px",fontFamily:"'DM Mono',monospace",fontSize:10,color:p.rateGap>0?C.success:C.warn}}>{p.origRate}% ({p.year})</td>
+                            <td style={{padding:"8px 10px",fontSize:10,color:C.dim,maxWidth:140,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.oppType}</td>
+                            <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:600,color:sc}}>{p.refiScore}</td>
+                            <td style={{padding:"8px 10px"}}><span style={{fontSize:8,padding:"2px 7px",borderRadius:3,background:`${PC[p.priority]}14`,color:PC[p.priority],fontFamily:"'DM Mono',monospace"}}>{p.priority.toUpperCase()}</span></td>
+                            <td style={{padding:"8px 10px"}}><div style={{display:"flex",gap:5}}>
+                              <button onClick={()=>setDetail(p)} style={{...btnOutline,padding:"3px 8px",fontSize:9}}>View</button>
+                              <button onClick={()=>addToPipeline(p)} disabled={!!inPipe} style={{...btnOutline,padding:"3px 8px",fontSize:9,color:inPipe?C.success:C.muted,borderColor:inPipe?C.successBorder:C.border}}>{inPipe?"✓":"+ Add"}</button>
+                            </div></td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── OUTREACH STUDIO TAB ─── */}
+      {tab==="outreach"&&(
+        <div style={{display:"grid",gridTemplateColumns:"260px 1fr",gap:18}}>
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <div style={P}>
+              <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.gold,letterSpacing:".1em",marginBottom:12}}>SEQUENCE SETTINGS</div>
+              <div style={{marginBottom:12}}>
+                <FL l="Channel"/>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                  {CHANNELS.map(ch=>(
+                    <button key={ch.id} onClick={()=>setChannel(ch.id)} style={{padding:"7px 8px",borderRadius:7,border:`1px solid ${channel===ch.id?C.borderGold:C.border}`,background:channel===ch.id?`${C.goldMuted}22`:"transparent",color:channel===ch.id?C.gold:C.muted,fontSize:11,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",textAlign:"center"}}>
+                      {ch.icon} {ch.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{marginBottom:12}}>
+                <FL l="Sequence Length"/>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {TOUCH_COUNTS.map(t=>(
+                    <button key={t.id} onClick={()=>setTouches(t.id)} style={{padding:"7px 12px",borderRadius:7,border:`1px solid ${touches===t.id?C.borderGold:C.border}`,background:touches===t.id?`${C.goldMuted}22`:"transparent",color:touches===t.id?C.gold:C.muted,fontSize:11,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",textAlign:"left"}}>{t.label}</button>
+                  ))}
+                </div>
+              </div>
+              <div style={{marginBottom:12}}>
+                <FL l="Tone"/>
+                <Sel val={tone} set={setTone} opts={["professional","consultative","urgent","casual"]}/>
+              </div>
+              <div style={{marginBottom:14}}>
+                <FL l="My Value Proposition"/>
+                <textarea value={myValue} onChange={e=>setMyValue(e.target.value)} rows={3} style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",fontSize:11,color:C.text,fontFamily:"'DM Sans',sans-serif",resize:"vertical",boxSizing:"border-box",outline:"none",lineHeight:1.5}}/>
+              </div>
+              {selected.length>0?(
+                <button onClick={genOutreach} disabled={oLoading} style={{...btnGold,width:"100%",padding:"10px 0",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>
+                  {oLoading?<><div style={{width:12,height:12,border:`2px solid ${C.bg}55`,borderTopColor:C.bg,borderRadius:"50%",animation:"spin 1s linear infinite"}}/>Generating...</>:<><Zap size={13}/>Generate Sequence</>}
+                </button>
+              ):(
+                <div style={{padding:"12px 14px",background:C.card,borderRadius:8,textAlign:"center"}}>
+                  <p style={{fontSize:11,color:C.muted}}>Select prospects from Search tab, then generate outreach here.</p>
+                </div>
+              )}
+            </div>
+            {outreach&&<div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:14}}>
+              <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:8}}>PROSPECT</div>
+              <div style={{fontSize:12,fontWeight:600,color:C.white,marginBottom:3}}>{outreach.prospect?.company}</div>
+              <div style={{fontSize:10,color:C.muted}}>{outreach.prospect?.propType} · {outreach.prospect?.city}, {outreach.prospect?.state}</div>
+              <div style={{fontSize:10,color:C.muted,marginTop:3}}>${Math.round((outreach.prospect?.loanAmt||0)/1000)}K · {outreach.prospect?.year}</div>
+              <div style={{marginTop:10,display:"flex",gap:6}}>
+                <button onClick={()=>addToPipeline(outreach.prospect)} style={{...btnOutline,padding:"4px 10px",fontSize:10,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:4}}><Target size={9}/>+ Pipeline</button>
+                <button onClick={()=>markContacted(outreach.prospect?.id)} style={{...btnOutline,padding:"4px 10px",fontSize:10,flex:1}}>✓ Contacted</button>
+              </div>
+            </div>}
+          </div>
+
+          <div>
+            {oLoading&&<div style={{background:C.surface,border:`1px solid ${C.borderGold}`,borderRadius:14,padding:"48px 28px",textAlign:"center"}}>
+              <div style={{width:28,height:28,border:`2px solid ${C.borderGold}`,borderTopColor:C.goldBright,borderRadius:"50%",animation:"spin 1s linear infinite",margin:"0 auto 12px"}}/>
+              <p style={{color:C.muted,fontSize:13}}>Generating {touches}-touch {channel} sequence...</p>
+            </div>}
+            {outreach&&!oLoading&&(
+              <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:24}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,paddingBottom:14,borderBottom:`1px solid ${C.border}`}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <Mail size={15} color={C.gold}/>
+                    <span style={{fontSize:13,fontWeight:600,color:C.white}}>{CHANNELS.find(c=>c.id===outreach.channel)?.label} Sequence</span>
+                    <span style={{fontSize:9,padding:"2px 7px",borderRadius:3,background:`${C.goldMuted}2A`,color:C.gold,fontFamily:"'DM Mono',monospace"}}>{outreach.touches}-TOUCH</span>
+                  </div>
+                  <div style={{display:"flex",gap:8}}>
+                    <button onClick={()=>{navigator.clipboard.writeText(outreach.text).then(()=>{setCopiedOut(true);setTimeout(()=>setCopiedOut(false),2500);});}} style={{...btnOutline,padding:"5px 12px",fontSize:11,display:"flex",alignItems:"center",gap:4}}>{copiedOut?<><CheckCircle size={10} color={C.success}/>Copied!</>:<><Copy size={10}/>Copy All</>}</button>
+                    <button onClick={genOutreach} style={{...btnOutline,padding:"5px 12px",fontSize:11,display:"flex",alignItems:"center",gap:4}}><RefreshCw size={10}/>Regenerate</button>
+                  </div>
+                </div>
+                <div style={{fontSize:13,color:C.text,lineHeight:1.9}}>
+                  {outreach.text?.split('\n').map((line,i)=>{
+                    if(line.startsWith('## TOUCH')||line.startsWith('## Touch'))return<h3 key={i} style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,color:C.gold,margin:"24px 0 8px",fontWeight:600,borderBottom:`1px solid ${C.border}`,paddingBottom:5}}>{line.replace('## ','')}</h3>;
+                    if(line.startsWith('SUBJECT:')||line.startsWith('Subject:'))return<div key={i} style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:C.blue,marginBottom:6,padding:"4px 8px",background:`${C.blue}11`,borderRadius:4,display:"inline-block"}}>{line}</div>;
+                    if(line.startsWith('['))return<div key={i} style={{fontSize:11,color:C.warn,fontStyle:"italic",margin:"4px 0",padding:"3px 8px",background:`${C.warn}11`,borderRadius:4,display:"inline-block"}}>{line}</div>;
+                    if(line==='')return<div key={i} style={{height:6}}/>;
+                    return<p key={i} style={{margin:"3px 0"}}>{line}</p>;
+                  })}
+                </div>
+              </div>
+            )}
+            {!outreach&&!oLoading&&<div style={{...P,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:380,opacity:.5}}>
+              <Mail size={36} color={C.muted} style={{marginBottom:12}}/>
+              <p style={{color:C.muted,fontSize:14}}>Configure settings and select prospects to generate outreach</p>
+              <p style={{color:C.dim,fontSize:11,marginTop:4}}>Personalized to each prospect's loan, lender, rate, and timeline</p>
+            </div>}
+          </div>
+        </div>
+      )}
+
+      {/* ─── PIPELINE TAB ─── */}
+      {tab==="pipeline"&&(
+        <div>
+          {pipeline.length===0?(
+            <div style={{...P,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:340,opacity:.5}}>
+              <Target size={36} color={C.muted} style={{marginBottom:12}}/>
+              <p style={{color:C.muted,fontSize:14}}>No prospects in pipeline yet</p>
+              <p style={{color:C.dim,fontSize:11,marginTop:4}}>Search for prospects and click "+ Add" to add them here</p>
+            </div>
+          ):(
+            <>
+              {/* Stage summary bar */}
+              <div style={{display:"flex",gap:8,marginBottom:18,overflowX:"auto"}}>
+                {stageBreakdown.map(st=>(
+                  <div key={st.id} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 14px",flexShrink:0,minWidth:110}}>
+                    <div style={{fontSize:10,color:st.color,fontFamily:"'DM Mono',monospace",marginBottom:4}}>{st.label.toUpperCase()}</div>
+                    <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:700,color:C.white}}>{st.count}</div>
+                    {st.value>0&&<div style={{fontSize:9,color:C.dim,marginTop:2}}>${Math.round(st.value/1000)}K</div>}
+                  </div>
+                ))}
+                <div style={{background:`${C.goldMuted}11`,border:`1px solid ${C.borderGold}`,borderRadius:10,padding:"10px 14px",flexShrink:0,minWidth:130}}>
+                  <div style={{fontSize:10,color:C.gold,fontFamily:"'DM Mono',monospace",marginBottom:4}}>PROJ. FEES (1%)</div>
+                  <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:700,color:C.goldBright}}>${Math.round(projectedFees/1000)}K</div>
+                  <div style={{fontSize:9,color:C.dim,marginTop:2}}>Weighted pipeline</div>
+                </div>
+              </div>
+
+              {/* Pipeline table */}
+              <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden"}}>
+                <div style={{padding:"10px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <span style={{fontSize:10,color:C.muted}}>{pipeline.length} prospects</span>
+                  <button onClick={()=>exportCSV(pipeline)} style={{...btnOutline,padding:"4px 10px",fontSize:10,display:"flex",alignItems:"center",gap:4}}><Download size={9}/>Export All</button>
+                </div>
+                <div style={{overflowX:"auto"}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",minWidth:700}}>
+                    <thead><tr style={{borderBottom:`1px solid ${C.border}`,background:C.card}}>
+                      {["Company","Type","Loan","Lender","Stage","Refi Score","Last Contact","Notes",""].map(h=>(
+                        <th key={h} style={{padding:"8px 10px",textAlign:"left",fontSize:9,color:C.muted,fontWeight:400,fontFamily:"'DM Mono',monospace"}}>{h}</th>
+                      ))}
+                    </tr></thead>
+                    <tbody>
+                      {pipeline.map(p=>{
+                        const stg=PIPELINE_STAGES.find(s=>s.id===p.stage)||PIPELINE_STAGES[0];
+                        return(
+                          <tr key={p.id} style={{borderBottom:`1px solid ${C.border}`}}>
+                            <td style={{padding:"9px 10px",fontSize:11,color:C.text,maxWidth:150,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.company}</td>
+                            <td style={{padding:"9px 10px",fontSize:10,color:C.muted}}>{p.propType}</td>
+                            <td style={{padding:"9px 10px",fontFamily:"'DM Mono',monospace",fontSize:10,color:C.text}}>${Math.round(p.loanAmt/1000)}K</td>
+                            <td style={{padding:"9px 10px",fontSize:10,color:C.muted,maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.lender}</td>
+                            <td style={{padding:"9px 8px"}}>
+                              <select value={p.stage} onChange={e=>updateStage(p.id,e.target.value)} style={{...IS,padding:"3px 6px",fontSize:10,color:stg.color,background:C.card,border:`1px solid ${stg.color}44`,width:130}}>
+                                {PIPELINE_STAGES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
+                              </select>
+                            </td>
+                            <td style={{padding:"9px 10px",fontFamily:"'DM Mono',monospace",fontSize:11,color:p.refiScore>=70?C.success:C.goldBright}}>{p.refiScore}</td>
+                            <td style={{padding:"9px 10px",fontSize:10,color:C.dim}}>
+                              {p.lastContacted?new Date(p.lastContacted).toLocaleDateString("en-US",{month:"short",day:"numeric"}):"—"}
+                            </td>
+                            <td style={{padding:"9px 8px"}}>
+                              <input value={p.notes||""} onChange={e=>updateNotes(p.id,e.target.value)} placeholder="Add note..." style={{...IS,padding:"3px 8px",fontSize:10,width:140}}/>
+                            </td>
+                            <td style={{padding:"9px 8px"}}><div style={{display:"flex",gap:4}}>
+                              <button onClick={()=>markContacted(p.id)} style={{...btnOutline,padding:"3px 8px",fontSize:9}}>✓</button>
+                              <button onClick={()=>removeFromPipeline(p.id)} style={{background:"none",border:`1px solid ${C.border}`,color:C.dim,borderRadius:5,padding:"3px 6px",cursor:"pointer",fontSize:9}}>✕</button>
+                            </div></td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </>
           )}
         </div>
-      </div>
-      {detail&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",backdropFilter:"blur(4px)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setDetail(null)}>
-        <div style={{background:C.card,border:`1px solid ${C.borderGold}`,borderRadius:16,padding:28,maxWidth:440,width:"90%",animation:"fadeUp .3s ease"}} onClick={e=>e.stopPropagation()}>
-          <div style={{display:"flex",justifyContent:"space-between",marginBottom:18}}><h3 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,color:C.white}}>{detail.name}</h3><button onClick={()=>setDetail(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.muted}}><X size={16}/></button></div>
-          {[["Type",detail.propType],["Location",`${detail.city}, ${detail.state}`],["Loan Amount",`$${detail.loanAmt.toLocaleString()}`],["Prior Lender",detail.lender],["APEX Score",`${detail.apexScore}/100`],["Contact",detail.contact],["Phone",detail.phone]].map(([l,v])=>(
-            <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:`1px solid ${C.border}`}}><span style={{fontSize:11,color:C.muted}}>{l}</span><span style={{fontSize:11,color:C.text}}>{v}</span></div>
+      )}
+
+      {/* ─── ANALYTICS TAB ─── */}
+      {tab==="analytics"&&(
+        <div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:20}}>
+            {[
+              {l:"Pipeline Size",v:pipeline.length,sub:"active prospects",color:C.blue},
+              {l:"Total Loan Volume",v:`$${Math.round(pipeline.reduce((s,p)=>s+p.loanAmt,0)/1e6*10)/10}M`,sub:"in pipeline",color:C.teal},
+              {l:"Weighted Pipeline",v:`$${Math.round(pipelineValue/1000)}K`,sub:"by stage probability",color:C.gold},
+              {l:"Projected Fees (1%)",v:`$${Math.round(projectedFees/1000)}K`,sub:"at close",color:C.success},
+            ].map((m,i)=>(
+              <div key={i} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:20}}>
+                <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".08em",marginBottom:8}}>{m.l.toUpperCase()}</div>
+                <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:32,fontWeight:700,color:m.color,lineHeight:1,marginBottom:4}}>{m.v}</div>
+                <div style={{fontSize:10,color:C.dim}}>{m.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+            <div style={P}>
+              <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:14}}>PIPELINE BY STAGE</div>
+              {stageBreakdown.map(st=>(
+                <div key={st.id} style={{marginBottom:14}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                    <span style={{fontSize:12,color:C.text}}>{st.label}</span>
+                    <div style={{display:"flex",gap:12}}>
+                      <span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:C.muted}}>{st.count} prospects</span>
+                      {st.value>0&&<span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:st.color}}>${Math.round(st.value/1000)}K</span>}
+                    </div>
+                  </div>
+                  <div style={{height:6,background:C.border,borderRadius:3,overflow:"hidden"}}>
+                    <div style={{height:"100%",width:`${pipeline.length>0?st.count/pipeline.length*100:0}%`,background:st.color,borderRadius:3,transition:"width .5s"}}/>
+                  </div>
+                  <div style={{fontSize:9,color:C.dim,marginTop:2}}>{st.prob}% close probability</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={P}>
+              <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:14}}>REVENUE PROJECTION</div>
+              {[
+                {label:"If all Hot close (1% fee)",val:pipeline.filter(p=>p.priority==="Hot").reduce((s,p)=>s+p.loanAmt,0)*0.01},
+                {label:"If pipeline closes at prob",val:projectedFees},
+                {label:"If top 20% close",val:pipeline.sort((a,b)=>b.refiScore-a.refiScore).slice(0,Math.max(1,Math.floor(pipeline.length*0.2))).reduce((s,p)=>s+p.loanAmt,0)*0.01},
+                {label:"Annual (×3 pipelines/yr)",val:projectedFees*3},
+              ].map((m,i)=>(
+                <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${C.border}`}}>
+                  <span style={{fontSize:12,color:C.muted}}>{m.label}</span>
+                  <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,fontWeight:600,color:m.val>50000?C.success:m.val>10000?C.goldBright:C.muted}}>${Math.round(m.val/1000)}K</span>
+                </div>
+              ))}
+              <div style={{marginTop:16,padding:"12px 14px",background:`${C.goldMuted}0A`,border:`1px solid ${C.borderGold}`,borderRadius:8}}>
+                <div style={{fontSize:10,color:C.gold,marginBottom:4}}>💡 Industry Benchmark</div>
+                <div style={{fontSize:11,color:C.muted,lineHeight:1.6}}>Top CRE capital finders close 4–8 deals/year at avg $3M–$5M. That's $120K–$400K in fees annually at 1%.</div>
+              </div>
+            </div>
+          </div>
+
+          {pipeline.length===0&&<div style={{marginTop:16,padding:"32px",background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,textAlign:"center",opacity:.5}}>
+            <p style={{color:C.muted,fontSize:13}}>Add prospects to your pipeline to see analytics</p>
+          </div>}
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {detail&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",backdropFilter:"blur(4px)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>setDetail(null)}>
+        <div style={{background:C.card,border:`1px solid ${C.borderGold}`,borderRadius:16,padding:28,maxWidth:460,width:"100%",animation:"fadeUp .3s ease"}} onClick={e=>e.stopPropagation()}>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:18}}>
+            <h3 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,color:C.white}}>{detail.company}</h3>
+            <button onClick={()=>setDetail(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.muted}}><X size={16}/></button>
+          </div>
+          {[
+            ["Property Type",detail.propType],
+            ["Location",`${detail.city}, ${detail.state}`],
+            ["Loan Amount",`$${detail.loanAmt.toLocaleString()}`],
+            ["Lender",detail.lender],
+            ["HMDA Year",detail.year],
+            ["Original Rate",`${detail.origRate}%`],
+            ["Rate Gap",`${detail.rateGap > 0 ? '+' : ''}${detail.rateGap}% vs market`],
+            ["Opportunity",detail.oppType],
+            ["Refi Score",`${detail.refiScore}/100`],
+          ].map(([l,v])=>(
+            <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
+              <span style={{fontSize:11,color:C.muted}}>{l}</span>
+              <span style={{fontSize:11,color:C.text,textAlign:"right"}}>{v}</span>
+            </div>
           ))}
-          <button onClick={()=>{toggle(detail.id);setDetail(null);}} style={{...btnGold,width:"100%",marginTop:18,padding:"10px 0",fontSize:12}}>Add to Outreach List</button>
+          <div style={{display:"flex",gap:8,marginTop:18}}>
+            <button onClick={()=>{addToPipeline(detail);setDetail(null);}} style={{...btnGold,flex:1,padding:"10px 0",fontSize:12}}>+ Add to Pipeline</button>
+            <button onClick={()=>{toggle(detail.id);setDetail(null);setTab("outreach");genOutreach();}} style={{...btnOutline,flex:1,padding:"10px 0",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",gap:5}}><Zap size={11}/>Generate Outreach</button>
+          </div>
         </div>
       </div>}
     </div>
