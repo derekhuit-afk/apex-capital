@@ -1598,15 +1598,17 @@ const StatusPill=({text,ok,warn})=>(
 function UnderwritingHub() {
   const [tab,setTab]=useState("dscr");
   const TABS=[
-    {id:"dscr",l:"DSCR"},{id:"noi",l:"NOI Analyzer"},{id:"ltv",l:"Leverage"},{id:"sizing",l:"Loan Sizing"},
-    {id:"irr",l:"IRR & Returns"},{id:"cf",l:"5-Yr Projection"},{id:"sens",l:"Sensitivity"},{id:"bridge",l:"Bridge-to-Perm"}
+    {id:"dscr",l:"DSCR"},{id:"noi",l:"NOI Analyzer"},{id:"ltv",l:"Leverage"},
+    {id:"sizing",l:"Loan Sizing"},{id:"irr",l:"IRR & Returns"},{id:"cf",l:"10-Yr Projection"},
+    {id:"sens",l:"Sensitivity"},{id:"bridge",l:"Bridge→Perm"},
+    {id:"refi",l:"Refi Analyzer"},{id:"mf",l:"MF Rent Roll"},{id:"ai",l:"AI Analyzer"},
   ];
   return (
-    <div className="au" style={{maxWidth:1040}}>
+    <div className="au" style={{maxWidth:1100}}>
       <h2 style={H2}>Underwriting Suite</h2>
-      <p style={{...Sub,marginBottom:18}}>8 live CRE calculators. All results update in real time as you type.</p>
+      <p style={{...Sub,marginBottom:18}}>11 professional CRE calculators + AI deal analyzer. All results update in real time.</p>
       <div style={{display:"flex",gap:4,background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:4,marginBottom:22,overflowX:"auto",flexWrap:"wrap"}}>
-        {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"7px 14px",borderRadius:7,border:"none",background:tab===t.id?C.card:"transparent",color:tab===t.id?C.goldBright:C.muted,fontSize:12,fontWeight:tab===t.id?600:400,cursor:"pointer",whiteSpace:"nowrap",fontFamily:"'DM Sans',sans-serif",transition:"all .15s"}}>{t.l}</button>)}
+        {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"7px 14px",borderRadius:7,border:"none",background:tab===t.id?C.card:"transparent",color:tab===t.id?C.goldBright:C.muted,fontSize:12,fontWeight:tab===t.id?600:400,cursor:"pointer",whiteSpace:"nowrap",fontFamily:"'DM Sans',sans-serif",transition:"all .15s",boxShadow:tab===t.id&&t.id==="ai"?`0 0 0 1px ${C.borderGold}`:undefined}}>{t.l}{t.id==="ai"&&<span style={{marginLeft:5,fontSize:8,background:`${C.goldMuted}33`,color:C.gold,padding:"1px 5px",borderRadius:3,fontFamily:"'DM Mono',monospace"}}>AI</span>}</button>)}
       </div>
       <div className="ai">
         {tab==="dscr"&&<DSCRCalc/>}
@@ -1617,6 +1619,9 @@ function UnderwritingHub() {
         {tab==="cf"&&<CFProj/>}
         {tab==="sens"&&<SensMatrix/>}
         {tab==="bridge"&&<BridgeToPerm/>}
+        {tab==="refi"&&<RefiCalc/>}
+        {tab==="mf"&&<MFRentRoll/>}
+        {tab==="ai"&&<AIDealAnalyzer/>}
       </div>
     </div>
   );
@@ -2497,6 +2502,395 @@ Write a concise, professional 3-paragraph intro email (subject line + body). Par
             <div style={{padding:"12px 16px",fontSize:11,color:C.dim,fontStyle:"italic"}}>Click Generate Email to create a personalized outreach email for this lender based on your deal profile.</div>
           )}
         </div>
+      </div>}
+    </div>
+  );
+}
+
+/* ─── REFI ANALYZER ─── */
+function RefiCalc() {
+  const [v,sv]=useState({
+    currentBalance:"1400000",currentRate:"4.25",currentAmort:"25",remainingTerm:"18",
+    currentNOI:"175000",newRate:"6.75",newLTV:"70",newAmort:"25",appraised:"2600000",
+    closingCostsPct:"2",purpose:"Rate & Term"
+  });
+  const s=k=>val=>sv(p=>({...p,[k]:val}));
+  const curBal=parseFloat(v.currentBalance)||0,curRate=parseFloat(v.currentRate)||0;
+  const curAmort=parseFloat(v.currentAmort)||25,remTerm=parseFloat(v.remainingTerm)||18;
+  const noi=parseFloat(v.currentNOI)||0,newRate=parseFloat(v.newRate)||0;
+  const newLTV=parseFloat(v.newLTV)/100||0.70,newAmort=parseFloat(v.newAmort)||25;
+  const apprVal=parseFloat(v.appraised)||0;
+  const closingCostsPct=parseFloat(v.closingCostsPct)/100||0.02;
+
+  const curPmt=monthlyPmt(curBal,curRate,curAmort);
+  const curAnnDebt=curPmt*12;
+  const curDSCR=curAnnDebt>0?noi/curAnnDebt:0;
+
+  const maxLoanByLTV=apprVal*newLTV;
+  const maxLoanByDSCR=(() => {
+    const maxDebt=noi/1.25,mPmt=maxDebt/12,r=newRate/100/12,n=newAmort*12;
+    return r>0?mPmt*(Math.pow(1+r,n)-1)/(r*Math.pow(1+r,n)):mPmt*n;
+  })();
+  const newLoan=Math.min(maxLoanByLTV,maxLoanByDSCR);
+  const cashOut=Math.max(0,newLoan-curBal);
+  const closingCosts=newLoan*closingCostsPct;
+  const netCashOut=cashOut-closingCosts;
+  const newPmt=monthlyPmt(newLoan,newRate,newAmort);
+  const newAnnDebt=newPmt*12;
+  const newDSCR=newAnnDebt>0?noi/newAnnDebt:0;
+  const newLTVActual=apprVal>0?newLoan/apprVal*100:0;
+  const newDY=newLoan>0?noi/newLoan*100:0;
+  const monthlyDiff=newPmt-curPmt;
+  const bindingConstraint=maxLoanByDSCR<maxLoanByLTV?"DSCR":"LTV";
+
+  // Breakeven on closing costs (months of payment savings)
+  const monthlySavings=curPmt-newPmt;
+  const breakeven=monthlySavings>0?Math.ceil(closingCosts/monthlySavings):null;
+
+  return(
+    <div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+        <div style={P}>
+          <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.blue,letterSpacing:".1em",marginBottom:12}}>EXISTING LOAN</div>
+          <UWInput label="Current Loan Balance" value={v.currentBalance} set={s("currentBalance")} prefix="$"/>
+          <UWInput label="Current Rate" value={v.currentRate} set={s("currentRate")} suffix="%"/>
+          <UWInput label="Original Amortization" value={v.currentAmort} set={s("currentAmort")} suffix="yr"/>
+          <UWInput label="Remaining Term" value={v.remainingTerm} set={s("remainingTerm")} suffix="mo"/>
+          <UWInput label="Annual NOI" value={v.currentNOI} set={s("currentNOI")} prefix="$"/>
+          <div style={{marginTop:10,padding:"10px 12px",background:C.card,borderRadius:8,border:`1px solid ${C.border}`}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontSize:11,color:C.muted}}>Current Monthly Payment</span><span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:C.text}}>{fmtD(curPmt)}/mo</span></div>
+            <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:11,color:C.muted}}>Current DSCR</span><span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:curDSCR>=1.25?C.success:C.warn}}>{curDSCR.toFixed(2)}x</span></div>
+          </div>
+        </div>
+        <div style={P}>
+          <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.teal,letterSpacing:".1em",marginBottom:12}}>NEW LOAN</div>
+          <UWInput label="Appraised Value" value={v.appraised} set={s("appraised")} prefix="$"/>
+          <UWInput label="New Rate" value={v.newRate} set={s("newRate")} suffix="%"/>
+          <UWInput label="New LTV Maximum" value={v.newLTV} set={s("newLTV")} suffix="%"/>
+          <UWInput label="New Amortization" value={v.newAmort} set={s("newAmort")} suffix="yr"/>
+          <UWInput label="Closing Costs" value={v.closingCostsPct} set={s("closingCostsPct")} suffix="%"/>
+        </div>
+      </div>
+
+      {/* Results */}
+      <div style={{background:C.surface,border:`2px solid ${C.borderGold}`,borderRadius:14,padding:"20px 22px",marginBottom:16}}>
+        <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.gold,letterSpacing:".15em",marginBottom:14}}>REFINANCE ANALYSIS</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:16}}>
+          <MetricCard label="NEW LOAN AMOUNT" value={fmtD(newLoan)} sub={`Binding: ${bindingConstraint}`} color={C.goldBright} size={24}/>
+          <MetricCard label="CASH-OUT PROCEEDS" value={fmtD(cashOut)} sub={`Net: ${fmtD(netCashOut)} after CC`} color={cashOut>0?C.success:C.muted} size={24}/>
+          <MetricCard label="NEW DSCR" value={`${newDSCR.toFixed(2)}x`} sub={`Was ${curDSCR.toFixed(2)}x`} color={newDSCR>=1.25?C.success:C.warn} size={24}/>
+          <MetricCard label="PAYMENT CHANGE" value={`${monthlyDiff>0?"+":""}${fmtD(monthlyDiff)}/mo`} sub={monthlyDiff>0?"Higher payment":"Savings"} color={monthlyDiff<=0?C.success:C.warn} size={24}/>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+          <div>
+            <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:10}}>LOAN COMPARISON</div>
+            {[
+              ["Current Balance",fmtD(curBal),"New Loan",fmtD(newLoan)],
+              ["Current Rate",`${curRate.toFixed(2)}%`,"New Rate",`${newRate.toFixed(2)}%`],
+              ["Current Pmt",`${fmtD(curPmt)}/mo`,"New Pmt",`${fmtD(newPmt)}/mo`],
+              ["Current DSCR",`${curDSCR.toFixed(2)}x`,"New DSCR",`${newDSCR.toFixed(2)}x`],
+              ["Current LTV",`${apprVal>0?(curBal/apprVal*100).toFixed(1):"-"}%`,"New LTV",`${newLTVActual.toFixed(1)}%`],
+            ].map(([l1,v1,l2,v2])=>(
+              <div key={l1} style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,padding:"7px 0",borderBottom:`1px solid ${C.border}`}}>
+                <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:11,color:C.dim}}>{l1}</span><span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:C.muted}}>{v1}</span></div>
+                <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:11,color:C.dim}}>{l2}</span><span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:C.gold}}>{v2}</span></div>
+              </div>
+            ))}
+          </div>
+          <div>
+            <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:10}}>ECONOMICS</div>
+            {[
+              ["Max Loan by LTV",fmtD(maxLoanByLTV)],
+              ["Max Loan by DSCR (1.25x)",fmtD(maxLoanByDSCR)],
+              ["Binding Constraint",bindingConstraint],
+              ["Gross Cash-Out",fmtD(cashOut)],
+              ["Closing Costs",`${fmtD(closingCosts)} (${v.closingCostsPct}%)`],
+              ["Net Cash-Out",fmtD(netCashOut)],
+              ["Debt Yield",`${newDY.toFixed(2)}%`],
+              breakeven?["Breakeven Period",`${breakeven} months`]:["Breakeven","N/A — payment increases"],
+            ].filter(Boolean).map(([l,val])=>(
+              <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:`1px solid ${C.border}`}}>
+                <span style={{fontSize:11,color:C.muted}}>{l}</span>
+                <span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:C.text}}>{val}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Status */}
+      <div style={{...P,display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+        <StatusPill text={`DSCR: ${newDSCR.toFixed(2)}x`} ok={newDSCR>=1.25} warn={newDSCR>=1.10}/>
+        <StatusPill text={`LTV: ${newLTVActual.toFixed(1)}%`} ok={newLTVActual<=75} warn={newLTVActual<=80}/>
+        <StatusPill text={`DY: ${newDY.toFixed(1)}%`} ok={newDY>=9} warn={newDY>=7}/>
+        <StatusPill text={cashOut>0?"Cash-Out Refi":"Rate & Term Refi"} ok={true}/>
+      </div>
+    </div>
+  );
+}
+
+/* ─── MULTIFAMILY RENT ROLL ─── */
+function MFRentRoll() {
+  const defaultUnits=[
+    {id:1,type:"1BR/1BA",count:"8",marketRent:"1250",inPlaceRent:"1100",vac:"5"},
+    {id:2,type:"2BR/1BA",count:"10",marketRent:"1550",inPlaceRent:"1350",vac:"5"},
+    {id:3,type:"2BR/2BA",count:"6",marketRent:"1750",inPlaceRent:"1600",vac:"5"},
+    {id:4,type:"3BR/2BA",count:"4",marketRent:"2100",inPlaceRent:"1900",vac:"5"},
+  ];
+  const [units,setUnits]=useState(defaultUnits);
+  const [v,sv]=useState({otherIncome:"3600",vacOverride:"",expRatio:"40",price:"3500000",rate:"6.75",ltv:"70",amort:"25"});
+  const s=k=>val=>sv(p=>({...p,[k]:val}));
+
+  const updUnit=(id,key,val)=>setUnits(u=>u.map(u2=>u2.id===id?{...u2,[key]:val}:u2));
+  const addUnit=()=>setUnits(u=>[...u,{id:Date.now(),type:"Studio",count:"1",marketRent:"1000",inPlaceRent:"950",vac:"5"}]);
+  const removeUnit=(id)=>setUnits(u=>u.filter(u2=>u2.id!==id));
+
+  const totalUnits=units.reduce((s,u)=>s+(parseInt(u.count)||0),0);
+  const gprMarket=units.reduce((s,u)=>{const cnt=parseInt(u.count)||0,rent=parseFloat(u.marketRent)||0,vac=parseFloat(u.vac)/100||0;return s+cnt*rent*12*(1-vac);},0);
+  const gprInPlace=units.reduce((s,u)=>{const cnt=parseInt(u.count)||0,rent=parseFloat(u.inPlaceRent)||0,vac=parseFloat(u.vac)/100||0;return s+cnt*rent*12*(1-vac);},0);
+  const otherInc=parseFloat(v.otherIncome)*12||0;
+  const egi=gprInPlace+otherInc;
+  const expRatio=parseFloat(v.expRatio)/100||0.40;
+  const expenses=egi*expRatio;
+  const noi=egi-expenses;
+  const rentGap=gprMarket-gprInPlace;
+  const price=parseFloat(v.price)||0,ltvN=parseFloat(v.ltv)/100||0.70;
+  const loan=price*ltvN,pmt=monthlyPmt(loan,parseFloat(v.rate),parseFloat(v.amort)),annDebt=pmt*12;
+  const dscr=annDebt>0?noi/annDebt:0;
+  const cap=price>0?noi/price*100:0;
+  const equity=price-loan,coc=equity>0?(noi-annDebt)/equity*100:0;
+  const noiu=totalUnits>0?noi/totalUnits:0;
+  const noiPerUnit=Math.round(noiu);
+  const pricePerUnit=totalUnits>0?price/totalUnits:0;
+  // Value-add upside
+  const noiAtMarket=(gprMarket+otherInc)*(1-expRatio);
+  const capRateN=cap/100;
+  const upsideValue=capRateN>0?(noiAtMarket-noi)/capRateN:0;
+
+  return(
+    <div>
+      {/* Unit Mix Table */}
+      <div style={P}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+          <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em"}}>UNIT MIX & RENT ROLL</div>
+          <button onClick={addUnit} style={{...btnOutline,padding:"4px 12px",fontSize:10,display:"flex",alignItems:"center",gap:4}}>+ Add Unit Type</button>
+        </div>
+        <div style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",minWidth:580}}>
+            <thead><tr>
+              {["Unit Type","# Units","Market Rent","In-Place Rent","Vacancy","Gross Income","Upside"].map(h=>(
+                <th key={h} style={{padding:"7px 10px",fontSize:9,color:C.muted,fontWeight:400,fontFamily:"'DM Mono',monospace",textAlign:h==="Unit Type"?"left":"right",borderBottom:`1px solid ${C.border}`}}>{h}</th>
+              ))}
+              <th style={{width:30,borderBottom:`1px solid ${C.border}`}}/>
+            </tr></thead>
+            <tbody>
+              {units.map(u=>{
+                const cnt=parseInt(u.count)||0,mRent=parseFloat(u.marketRent)||0,ipRent=parseFloat(u.inPlaceRent)||0,vacR=parseFloat(u.vac)/100||0;
+                const grossIncome=cnt*ipRent*12*(1-vacR);
+                const upside=cnt*(mRent-ipRent)*12*(1-vacR);
+                return(
+                  <tr key={u.id} style={{borderBottom:`1px solid ${C.border}`}}>
+                    <td style={{padding:"6px 8px"}}><input value={u.type} onChange={e=>updUnit(u.id,"type",e.target.value)} style={{...IS,padding:"4px 8px",fontSize:11,width:100}}/></td>
+                    <td style={{padding:"6px 8px"}}><input value={u.count} onChange={e=>updUnit(u.id,"count",e.target.value)} style={{...IS,padding:"4px 8px",fontSize:11,width:50,textAlign:"right",fontFamily:"'DM Mono',monospace"}}/></td>
+                    <td style={{padding:"6px 8px"}}><input value={u.marketRent} onChange={e=>updUnit(u.id,"marketRent",e.target.value)} style={{...IS,padding:"4px 8px",fontSize:11,width:80,textAlign:"right",fontFamily:"'DM Mono',monospace"}}/></td>
+                    <td style={{padding:"6px 8px"}}><input value={u.inPlaceRent} onChange={e=>updUnit(u.id,"inPlaceRent",e.target.value)} style={{...IS,padding:"4px 8px",fontSize:11,width:80,textAlign:"right",fontFamily:"'DM Mono',monospace"}}/></td>
+                    <td style={{padding:"6px 8px"}}><input value={u.vac} onChange={e=>updUnit(u.id,"vac",e.target.value)} style={{...IS,padding:"4px 8px",fontSize:11,width:50,textAlign:"right",fontFamily:"'DM Mono',monospace"}}/></td>
+                    <td style={{padding:"6px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:11,color:C.text}}>{fmtD(grossIncome)}</td>
+                    <td style={{padding:"6px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:11,color:upside>0?C.success:C.dim}}>{upside>0?`+${fmtD(upside)}`:"-"}</td>
+                    <td style={{padding:"6px 8px",textAlign:"center"}}><button onClick={()=>removeUnit(u.id)} style={{background:"none",border:"none",color:C.dim,cursor:"pointer",padding:2}}><X size={11}/></button></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr style={{borderTop:`2px solid ${C.borderGold}`,background:`${C.goldMuted}08`}}>
+                <td colSpan={1} style={{padding:"9px 10px",fontFamily:"'DM Mono',monospace",fontSize:10,color:C.gold}}>TOTAL</td>
+                <td style={{padding:"9px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:11,color:C.gold}}>{totalUnits}</td>
+                <td colSpan={2} style={{padding:"9px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:11,color:C.muted}}>Market GPR: {fmtD(gprMarket)}</td>
+                <td/>
+                <td style={{padding:"9px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:11,color:C.goldBright}}>{fmtD(gprInPlace)}</td>
+                <td style={{padding:"9px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:11,color:C.success}}>{rentGap>0?`+${fmtD(rentGap)}`:"-"}</td>
+                <td/>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      {/* Deal Inputs + Results */}
+      <div style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:16,marginTop:14}}>
+        <div style={P}>
+          <SL>Deal Parameters</SL>
+          <UWInput label="Monthly Other Income" value={v.otherIncome} set={s("otherIncome")} prefix="$"/>
+          <UWInput label="Expense Ratio" value={v.expRatio} set={s("expRatio")} suffix="%"/>
+          <UWInput label="Purchase Price" value={v.price} set={s("price")} prefix="$"/>
+          <UWInput label="Interest Rate" value={v.rate} set={s("rate")} suffix="%"/>
+          <UWInput label="LTV" value={v.ltv} set={s("ltv")} suffix="%"/>
+          <UWInput label="Amortization" value={v.amort} set={s("amort")} suffix="yr"/>
+        </div>
+        <div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:14}}>
+            <MetricCard label="NOI (IN-PLACE)" value={fmtD(noi)} sub={`${fmtD(noiPerUnit)}/unit/yr`} color={C.goldBright}/>
+            <MetricCard label="CAP RATE" value={`${cap.toFixed(2)}%`} sub={`At ${fmtD(price)}`} color={cap>=6?C.success:cap>=5?C.goldBright:C.warn}/>
+            <MetricCard label="DSCR" value={`${dscr.toFixed(2)}x`} sub="At current NOI" color={dscr>=1.25?C.success:C.warn}/>
+            <MetricCard label="CASH-ON-CASH" value={`${coc.toFixed(1)}%`} sub="After debt service" color={coc>=6?C.success:coc>=4?C.goldBright:C.warn}/>
+            <MetricCard label="PRICE / UNIT" value={fmtD(pricePerUnit)} sub={`${totalUnits} total units`}/>
+            <MetricCard label="RENT GAP" value={fmtD(rentGap)} sub="Annual upside potential" color={rentGap>0?C.success:C.muted}/>
+            <MetricCard label="UPSIDE VALUE" value={fmtD(upsideValue)} sub={`At ${cap.toFixed(2)}% cap`} color={upsideValue>0?C.success:C.muted}/>
+            <MetricCard label="EQUITY REQUIRED" value={fmtD(equity)} sub={`${(100-parseFloat(v.ltv)).toFixed(0)}% down`}/>
+          </div>
+          {/* NOI Waterfall */}
+          <div style={P}>
+            <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.muted,letterSpacing:".1em",marginBottom:10}}>NOI WATERFALL</div>
+            {[
+              {l:"GPR (In-Place, Effective)",v:gprInPlace,type:"inc"},
+              {l:"Other Income",v:otherInc,type:"inc"},
+              {l:"Effective Gross Income",v:egi,type:"sub"},
+              {l:`Operating Expenses (${v.expRatio}%)`,v:-expenses,type:"loss"},
+              {l:"Net Operating Income",v:noi,type:"noi"},
+              {l:"Annual Debt Service",v:-annDebt,type:"loss"},
+              {l:"Before-Tax Cash Flow",v:noi-annDebt,type:noi-annDebt>0?"inc":"loss"},
+            ].map((r,i)=>(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:`1px solid ${r.type==="noi"?C.borderGold:C.border}`,background:r.type==="noi"?`${C.goldMuted}08`:"transparent"}}>
+                <span style={{fontSize:12,color:r.type==="noi"?C.goldBright:r.type==="sub"?C.text:C.muted,fontWeight:r.type==="noi"||r.type==="sub"?600:400}}>{r.l}</span>
+                <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:r.type==="noi"?C.goldBright:r.v<0?C.danger:r.type==="sub"?C.white:C.text}}>
+                  {r.v<0?`-${fmtD(Math.abs(r.v))}`:fmtD(r.v)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── AI DEAL ANALYZER ─── */
+function AIDealAnalyzer() {
+  const [input,setInput]=useState("");
+  const [result,setResult]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [mode,setMode]=useState("full"); // full | quick | red_flags
+
+  const MODES=[
+    {id:"full",label:"Full Analysis",desc:"Complete underwriting review"},
+    {id:"quick",label:"Quick Screen",desc:"Pass/fail in 60 seconds"},
+    {id:"red_flags",label:"Red Flag Scan",desc:"What could kill this deal"},
+  ];
+
+  const placeholders=[
+    "12-unit multifamily in Anchorage, AK. Asking $1.8M. Current rents avg $1,100/mo. Market rents $1,350/mo. Expenses running 42%. 70% LTV at 6.875%. 5-year interest only period then 25-year amort...",
+    "Office building, 18,000 SF, $3.2M ask, 88% occupied, NNN leases, $312K NOI, CMBS at 7.25%...",
+    "Industrial flex, 24,000 SF, $2.75M, 100% occupied, 3 tenants, $198K NOI, asking 65% LTV...",
+  ];
+  const [ph]=useState(placeholders[Math.floor(Math.random()*placeholders.length)]);
+
+  const analyze=async()=>{
+    if(!input.trim())return;
+    setLoading(true);setResult("");
+    const prompts={
+      full:`You are a senior CRE underwriter and capital markets advisor. Analyze this deal with full institutional-grade underwriting. Structure your response exactly as follows:
+
+## Deal Overview
+Brief summary of what was presented.
+
+## Key Metrics (calculate what you can)
+- NOI: (calculate or estimate)
+- Cap Rate: (calculate)
+- DSCR: (calculate)  
+- LTV: (as stated or implied)
+- Debt Yield: (calculate)
+
+## Underwriting Assessment
+Detailed analysis of income, expenses, leverage, and debt coverage. Be specific with numbers.
+
+## Lender Fit
+What type of lender (agency, bank, life co, debt fund, CMBS, bridge) is right for this deal and why.
+
+## Strengths
+3-5 specific strengths with numbers.
+
+## Risks & Concerns
+3-5 specific risks with mitigation notes.
+
+## Verdict
+Clear FUND / CONDITIONAL / PASS recommendation with 2-3 sentence rationale.`,
+
+      quick:`You are a senior CRE underwriter doing a rapid screen. In 200 words max, give:
+1. PASS/CONDITIONAL/FAIL verdict upfront in bold
+2. 3 key reasons for your verdict (with numbers)
+3. One critical number or ratio the borrower should know
+Be direct and specific. No filler.`,
+
+      red_flags:`You are a CRE deal structuring expert. Identify every potential red flag, deal-killer, and risk in this deal. Format as:
+## 🔴 Critical Deal Killers (would cause immediate decline)
+## 🟡 Yellow Flags (need explanation or mitigation)  
+## ✅ What Works
+## Bottom Line
+Be brutally honest. Include lender perspective. Cite specific numbers from the deal.`
+    };
+
+    try{
+      const r=await callAI(prompts[mode],`Analyze this CRE deal:\n\n${input}`);
+      setResult(r);
+    }catch{setResult("Error analyzing deal. Please try again.");}
+    setLoading(false);
+  };
+
+  return(
+    <div style={{maxWidth:800}}>
+      <div style={{marginBottom:14}}>
+        <div style={{display:"flex",gap:8,marginBottom:14}}>
+          {MODES.map(m=>(
+            <button key={m.id} onClick={()=>setMode(m.id)} style={{padding:"8px 16px",borderRadius:8,border:`1px solid ${mode===m.id?C.borderGold:C.border}`,background:mode===m.id?`${C.goldMuted}22`:"transparent",color:mode===m.id?C.gold:C.muted,fontSize:12,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",textAlign:"left",fontWeight:mode===m.id?600:400}}>
+              <div style={{fontWeight:600}}>{m.label}</div>
+              <div style={{fontSize:10,opacity:.7,marginTop:1}}>{m.desc}</div>
+            </button>
+          ))}
+        </div>
+        <div style={{position:"relative"}}>
+          <textarea
+            value={input}
+            onChange={e=>setInput(e.target.value)}
+            placeholder={ph}
+            rows={6}
+            style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 14px",fontSize:13,color:C.text,fontFamily:"'DM Sans',sans-serif",resize:"vertical",lineHeight:1.6,boxSizing:"border-box",outline:"none"}}
+          />
+          <div style={{position:"absolute",bottom:10,right:12,fontSize:10,color:C.dim}}>{input.length} chars</div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginTop:10}}>
+          <button onClick={analyze} disabled={loading||!input.trim()} style={{...btnGold,padding:"11px 28px",fontSize:14,display:"flex",alignItems:"center",gap:8,opacity:loading||!input.trim()?0.6:1}}>
+            {loading?<><div style={{width:14,height:14,border:`2px solid ${C.bg}55`,borderTopColor:C.bg,borderRadius:"50%",animation:"spin 1s linear infinite"}}/>Analyzing...</>:<><Brain size={14}/>Analyze Deal</>}
+          </button>
+          {result&&<button onClick={()=>navigator.clipboard.writeText(result)} style={{...btnOutline,padding:"10px 18px",fontSize:12,display:"flex",alignItems:"center",gap:6}}><Copy size={11}/>Copy Report</button>}
+          {input&&<button onClick={()=>{setInput("");setResult("");}} style={{background:"none",border:"none",color:C.dim,cursor:"pointer",fontSize:12,fontFamily:"'DM Sans',sans-serif"}}>Clear</button>}
+        </div>
+      </div>
+
+      {loading&&<div style={{background:C.surface,border:`1px solid ${C.borderGold}`,borderRadius:14,padding:"40px 28px",textAlign:"center"}}>
+        <div style={{width:32,height:32,border:`2px solid ${C.borderGold}`,borderTopColor:C.goldBright,borderRadius:"50%",animation:"spin 1s linear infinite",margin:"0 auto 14px"}}/>
+        <p style={{color:C.muted,fontSize:13,marginBottom:4}}>Running institutional-grade underwriting analysis...</p>
+        <p style={{color:C.dim,fontSize:11}}>Calculating metrics, assessing lender fit, flagging risks</p>
+      </div>}
+
+      {result&&!loading&&(
+        <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:28}}>
+          <div style={{fontSize:13,color:C.text,lineHeight:1.9}}>
+            {result.split('\n').map((line,i)=>{
+              if(line.startsWith('## '))return<h2 key={i} style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,color:C.gold,margin:"22px 0 9px",fontWeight:600,borderBottom:`1px solid ${C.border}`,paddingBottom:5}}>{line.replace('## ','')}</h2>;
+              if(line.startsWith('### '))return<h3 key={i} style={{fontSize:14,color:C.white,margin:"14px 0 5px",fontWeight:600}}>{line.replace('### ','')}</h3>;
+              if(line.startsWith('- ')||line.startsWith('• '))return<div key={i} style={{paddingLeft:16,margin:"4px 0",display:"flex",gap:8}}><span style={{color:C.gold,flexShrink:0,marginTop:3}}>▸</span><span>{line.slice(2)}</span></div>;
+              if(line==='')return<div key={i} style={{height:6}}/>;
+              return<p key={i} style={{margin:"4px 0"}} dangerouslySetInnerHTML={{__html:line.replace(/\*\*(.*?)\*\*/g,'<strong style="color:#DDE2EE">$1</strong>')}}></p>;
+            })}
+          </div>
+        </div>
+      )}
+
+      {!result&&!loading&&<div style={{...P,textAlign:"center",padding:32,opacity:.5}}>
+        <Brain size={36} color={C.muted} style={{marginBottom:10}}/>
+        <p style={{color:C.muted,fontSize:13}}>Paste any deal summary above — address, price, NOI, loan terms, anything you have</p>
+        <p style={{color:C.dim,fontSize:11,marginTop:4}}>The more detail you provide, the sharper the analysis</p>
       </div>}
     </div>
   );
