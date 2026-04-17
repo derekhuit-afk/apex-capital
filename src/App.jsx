@@ -335,6 +335,18 @@ export default function App() {
     const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", onScroll);
 
+    // Hydrate LENDERS from Supabase (graceful fallback to hardcoded array)
+    fetch("/api/lenders")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.lenders?.length && data.source === "supabase.cre_lenders") {
+          // Mutate in place so all downstream consumers see the updated list
+          LENDERS.splice(0, LENDERS.length, ...data.lenders);
+          console.log(`[HyCRE] Lenders hydrated from Supabase: ${data.lenders.length}`);
+        }
+      })
+      .catch(() => { /* fallback to hardcoded array */ });
+
     // Check for password reset token in URL
     const params = new URLSearchParams(window.location.search);
     if (params.get("mode") === "reset" || params.get("reset")) {
@@ -1697,6 +1709,7 @@ function ProspectingEngine() {
   const [tab,setTab]=useState("search"); // search | outreach | pipeline | analytics
   const [filters,setFilters]=useState({propType:"Multifamily",state:"AK",minLoan:"500000",maxLoan:"5000000",year:"2023",count:"20"});
   const [prospects,setProspects]=useState([]);
+  const [sourceInfo,setSourceInfo]=useState(null);
   const [loading,setLoading]=useState(false);
   const [searched,setSearched]=useState(false);
   const [selected,setSelected]=useState([]);
@@ -1721,9 +1734,10 @@ function ProspectingEngine() {
       const r=await fetch(`/api/prospects?${params}`);
       const d=await r.json();
       setProspects(d.prospects||[]);
+      setSourceInfo({source:d.source,note:d.note,queriedYear:d.queriedYear,total:d.total});
     }catch{
-      // Fallback: generate client-side if API fails
       setProspects(generateLocal(filters));
+      setSourceInfo({source:"client_fallback",note:"API unavailable — showing local simulated data"});
     }
     setLoading(false);
   };
@@ -1854,6 +1868,14 @@ Label each as:
                 {loading?<><div style={{width:12,height:12,border:`2px solid ${C.bg}55`,borderTopColor:C.bg,borderRadius:"50%",animation:"spin 1s linear infinite"}}/>Searching...</>:<><Search size={13}/>Search Records</>}
               </button>
               {searched&&!loading&&<p style={{fontSize:10,color:C.success,textAlign:"center",marginTop:8}}>✓ {prospects.length} records found</p>}
+              {searched&&!loading&&sourceInfo&&(
+                <div style={{marginTop:6,textAlign:"center"}}>
+                  <span style={{fontSize:9,fontFamily:"'DM Mono',monospace",padding:"3px 8px",borderRadius:4,background:sourceInfo.source==="cfpb_hmda_live"?`${C.teal}18`:`${C.muted}18`,color:sourceInfo.source==="cfpb_hmda_live"?C.teal:C.muted,border:`1px solid ${sourceInfo.source==="cfpb_hmda_live"?C.teal:C.muted}44`,letterSpacing:".08em"}}>
+                    {sourceInfo.source==="cfpb_hmda_live"?"LIVE CFPB HMDA":sourceInfo.source==="simulator"?"SIMULATOR":sourceInfo.source==="simulator_fallback"?"SIM FALLBACK":"SIMULATOR"}
+                  </span>
+                  {sourceInfo.note&&<p style={{fontSize:9,color:C.muted,marginTop:4,fontStyle:"italic"}}>{sourceInfo.note}</p>}
+                </div>
+              )}
             </div>
 
             {selected.length>0&&(
