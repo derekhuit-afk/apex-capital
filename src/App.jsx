@@ -578,8 +578,12 @@ function Footer() {
     <footer style={{borderTop:`1px solid ${C.border}`,padding:"36px 24px",background:C.bg}}>
       <div style={{maxWidth:1200,margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:14}}>
         <Logo/>
-        <p style={{fontSize:12,color:C.dim}}>© 2026 HyCRE.ai · A Huit.AI Product · Built From Alaska.</p>
-        <div style={{display:"flex",gap:20}}>{["Privacy","Terms","Support"].map(l=><a key={l} href="#" style={{fontSize:12,color:C.dim,textDecoration:"none"}}>{l}</a>)}</div>
+        <p style={{fontSize:12,color:C.dim,margin:0}}>© 2026 HyCRE.ai · A Huit.AI Product · Derek Huit, Founder &amp; CEO · NMLS #203980</p>
+        <div style={{display:"flex",gap:20}}>
+          <a href="/terms" style={{fontSize:12,color:C.dim,textDecoration:"none"}}>Terms</a>
+          <a href="/privacy" style={{fontSize:12,color:C.dim,textDecoration:"none"}}>Privacy</a>
+          <a href="mailto:legal@huit.ai" style={{fontSize:12,color:C.dim,textDecoration:"none"}}>Support</a>
+        </div>
       </div>
     </footer>
   );
